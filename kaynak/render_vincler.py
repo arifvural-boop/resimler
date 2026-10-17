@@ -964,7 +964,7 @@ def sahne_duvar_pergel(M):
             silindir(f"civata{zz}{yy}", 0.018, 0.04, (0.04, yy, zz), M["celik"], axis="X", seg=6)
     # bom (IPE 300)
     zb = 4.30
-    ipe("bom", 0.12, 4.2, zb, 0.30, 0.15, M["turuncu"], g, tf=0.018, tw=0.011)
+    ipe("bom", 0.12, 4.2, zb, 0.30, 0.15, M["turuncu"], g, tf=0.022, tw=0.011)
     kutu("bom_kok", (0.24, 0.26, 0.40), (0.14, 0, zb - 0.16), M["turuncu"], g, bevel=0.02)
     kutu("bom_uc", (0.02, 0.22, 0.34), (4.21, 0, zb - 0.15), M["antrasit"], g, bevel=0.004)
     bom_logo(M, g, 1.25, zb)
@@ -979,8 +979,9 @@ def sahne_duvar_pergel(M):
     civata_izgara("bom_kok_c", (0.14, -0.132, zb - 0.16), (1, 0, 0), (0, 0, 1), 2, 3, 0.12, 0.11, "-Y", M, g, r=0.013)
     festoon("festoon", 0.3, 4.1, -0.27, zb + 0.07, 0.4, 3.25 - 0.42, M, g, n=5, L=1.1,
             y_konsol=-0.07, z_konsol=zb, aralik=1.2)
+    # caraskal bomun alt flanşında (ray) yürür: flanş arabanın içinden geçer, tekerlekler üstüne basar
     foto_vinc("zincirli_vinc_2ton.png", g, (3.25, 0, zb - 0.282), 1.25, capa=0.62, dikey=0.165,
-              arkasinda=("festoon",))  # tekerlekler alt flanşta
+              arkasinda=("festoon", "bom_alt"))
     if not BEYAZ:
         palet(M, (4.6, 0.1, 0), 0.35)
     if YAN:
@@ -1016,7 +1017,7 @@ def sahne_kolon_pergel(M):
     silindir("baslik", 0.215, 0.36, (0, 0, H + 0.30), M["antrasit"], g, seg=64, bevel=0.01)
     silindir("baslik_serit", 0.217, 0.05, (0, 0, H + 0.42), M["turuncu"], g, seg=64)
     silindir("baslik_kapak", 0.23, 0.04, (0, 0, H + 0.50), M["antrasit"], g, seg=64, bevel=0.008)
-    ipe("bom", 0.18, 4.4, zb, 0.30, 0.15, M["turuncu"], g, tf=0.018, tw=0.011)
+    ipe("bom", 0.18, 4.4, zb, 0.30, 0.15, M["turuncu"], g, tf=0.022, tw=0.011)
     kutu("bom_kok", (0.22, 0.26, 0.40), (0.22, 0, zb - 0.18), M["turuncu"], g, bevel=0.02)
     kutu("bom_uc", (0.02, 0.22, 0.34), (4.41, 0, zb - 0.15), M["antrasit"], g, bevel=0.004)
     bom_logo(M, g, 1.3, zb)
@@ -1031,7 +1032,7 @@ def sahne_kolon_pergel(M):
     festoon("festoon", 0.35, 4.3, -0.27, zb + 0.07, 0.45, 3.45 - 0.45, M, g, n=5, L=1.1,
             y_konsol=-0.07, z_konsol=zb, aralik=1.2)
     foto_vinc("kompakt_vinc.png", g, (3.45, 0, zb - 0.282), 1.10, capa=0.66, dikey=0.235,
-              arkasinda=("festoon",))  # tekerlekler alt flanşta
+              arkasinda=("festoon", "bom_alt"))
     if not BEYAZ:
         palet(M, (4.4, -0.6, 0), 0.3)
     if YAN:
