@@ -12,8 +12,9 @@ mercek kaydırmayla dik tutuldu. Arabaların tekerlekleri bom alt flanşına / k
 
 - Duvar tipi pergel → 2 ton zincirli vinç (`zincirli_vinc_2ton.png`)
 - Kolon tipi pergel → kompakt vinç (`kompakt_vinc.png`)
-- Yarı portal ve portal → halatlı vinç arabası (`halatli_vinc_araba.png`): kiriş raylarının
-  üstünde, ön kirişin arkasında; halat bandı uzatılarak kanca ~2 m yüksekliğe indirildi
+- Yarı portal ve portal → halatlı vinç arabası (`halatli_vinc_araba.png`): gerçek çift kirişli
+  portal yapısı (ayaklar kirişe dik düzlemde A, raylar kirişe dik); araba iki kirişin rayına basar,
+  kamera fotoğraf gibi kiriş doğrultusuna yakın (~25°) ve ~9° yukarıdan; halat bandı uzatıldı
 
 | Ürün | Orijinal | Gerçekçi |
 |---|---|---|
