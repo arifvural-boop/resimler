@@ -800,7 +800,7 @@ def sahne_duvar_pergel(M):
     boru("gergi", p1, p2, 0.048, M["turuncu"], g)
     kutu("gergi_ust_kulak", (0.16, 0.10, 0.08), (2.3, 0, zb - 0.34), M["antrasit"], g, bevel=0.008)
     silindir("gergi_ust_pim", 0.025, 0.14, (2.3, 0, zb - 0.36), M["celik"], g, axis="Y")
-    foto_vinc("zincirli_vinc_2ton.png", g, (3.25, 0, zb - 0.285), 1.25, capa=0.62)
+    foto_vinc("zincirli_vinc_2ton.png", g, (3.25, 0, zb - 0.282), 1.25, capa=0.62, dikey=0.165)  # tekerlekler alt flanşta
     if not BEYAZ:
         palet(M, (4.6, 0.1, 0), 0.35)
     if YAN:
@@ -843,7 +843,7 @@ def sahne_kolon_pergel(M):
     silindir("alt_bilezik", 0.205, 0.14, (0, 0, H - 0.75), M["antrasit"], g, seg=64, bevel=0.01)
     boru("gergi", (0.2, 0, H - 0.75), (2.3, 0, zb - 0.30), 0.048, M["turuncu"], g)
     kutu("gergi_ust_kulak", (0.16, 0.10, 0.08), (2.3, 0, zb - 0.34), M["antrasit"], g, bevel=0.008)
-    foto_vinc("kompakt_vinc.png", g, (3.45, 0, zb - 0.285), 1.10, capa=0.66)
+    foto_vinc("kompakt_vinc.png", g, (3.45, 0, zb - 0.282), 1.10, capa=0.66, dikey=0.235)  # tekerlekler alt flanşta
     if not BEYAZ:
         palet(M, (4.4, -0.6, 0), 0.3)
     if YAN:
@@ -945,7 +945,7 @@ def sahne_portal(M):
         ray("ray_sag", span, -RAY, RAY, M)
     g = bos("portal", (0, 0, 0.12))
     portal_govde(M, g, span, 6.6, 0.85, cift_ayak=True, kanca_z=3.0 if YAN else 1.4,
-                 foto=("halatli_vinc_araba.png", 2.3, 0.5, 0.41) if BEYAZ else None)
+                 foto=("halatli_vinc_araba.png", 2.3, 0.5, 0.44) if BEYAZ else None)
     # yük: çelik sac paketi
     if not BEYAZ:
         yuk_kasa(M, (span * 0.47 - 0.15, -0.0, 0.0))
@@ -979,7 +979,7 @@ def sahne_yari_portal(M):
     g = bos("portal", (0, 0, 0.12))
     zust = 7.75
     portal_govde(M, g, span, zust, 0.85, cift_ayak=False, kanca_z=3.4 if YAN else 1.4,
-                 foto=("halatli_vinc_araba.png", 2.3, 0.5, 0.41) if BEYAZ else None)
+                 foto=("halatli_vinc_araba.png", 2.3, 0.5, 0.44) if BEYAZ else None)
     # yol kirişi üzerindeki baş arabası
     bas_araba("bas_sag", span, -1.6, 1.6, M, g, z=6.68)
     kutu("sag_bas_baglanti", (0.5, 1.6, 0.25), (span, 0, zust - 0.85 - 0.12 + 0.0), M["turuncu"], g, bevel=0.01)
