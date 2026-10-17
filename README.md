@@ -8,8 +8,8 @@ beyaz zemini temizlenmiş) bom / kiriş alt başlığına perspektife uygun konu
 
 - Duvar tipi pergel → 2 ton zincirli vinç (`zincirli_vinc_2ton.png`)
 - Kolon tipi pergel → kompakt vinç (`kompakt_vinc.png`)
-- Yarı portal → 2 ton zincirli vinç
-- Portal → kompakt vinç
+- Yarı portal ve portal → halatlı vinç arabası (`halatli_vinc_araba.png`): kiriş raylarının
+  üstünde, ön kirişin arkasında; halat bandı uzatılarak kanca ~2 m yüksekliğe indirildi
 
 | Ürün | Orijinal | Gerçekçi |
 |---|---|---|

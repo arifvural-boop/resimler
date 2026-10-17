@@ -574,9 +574,35 @@ def ortam(M, **kw):
     return None  # zemin yok: düz beyaz arka plan, gölge yok
 
 
-def foto_vinc(dosya, nesne, nokta, yukseklik, capa=0.5):
-    """Gerçek ürün fotoğrafını, kirişin alt başlığına oturacak şekilde render sonrası ekle."""
-    FOTOLAR.append((os.path.join(FOTO_KLASOR, dosya), nesne, Vector(nokta), yukseklik, capa))
+def foto_vinc(dosya, nesne, nokta, yukseklik, capa=0.5, dikey=0.0, arkasinda=(), halat=None):
+    """Gerçek ürün fotoğrafını render sonrası ekle.
+
+    nokta: fotoğrafın `dikey` oranındaki yüksekliğe denk gelen 3B nokta (0 = üst kenar),
+    arkasinda: fotoğrafın önünde kalacak nesnelerin ad önekleri (ör. ön kiriş),
+    halat: (ust_oran, alt_oran, kanca_z) - fotoğraftaki yalnız halat bandını dikey uzatıp
+           kancayı kanca_z yüksekliğine indirir.
+    """
+    FOTOLAR.append((os.path.join(FOTO_KLASOR, dosya), nesne, Vector(nokta), yukseklik, capa, dikey,
+                    tuple(arkasinda), halat))
+
+
+def maske_render(onekler, yol):
+    """Yalnızca verilen nesnelerin kapsama maskesini (alfa) render et."""
+    sc = bpy.context.scene
+    for o in sc.objects:
+        if o.type in {"MESH", "CURVE", "FONT"} and not o.name.startswith(onekler):
+            o.hide_render = True
+    beyaz = bpy.data.materials.new("maske")
+    nt = node_tree(beyaz)
+    nt.nodes["Principled BSDF"].inputs["Emission Color"].default_value = (1, 1, 1, 1)
+    nt.nodes["Principled BSDF"].inputs["Emission Strength"].default_value = 1.0
+    bpy.context.view_layer.material_override = beyaz
+    sc.cycles.samples = 4
+    sc.cycles.use_denoising = False
+    sc.cycles.use_adaptive_sampling = False
+    sc.render.film_transparent = True
+    sc.render.filepath = yol
+    bpy.ops.render.render(write_still=True)
 
 
 def fotolari_ekle(cikti):
@@ -591,7 +617,9 @@ def fotolari_ekle(cikti):
     if BEYAZ:
         zemin = Image.new("RGBA", img.size, (255, 255, 255, 255))
         img = Image.alpha_composite(zemin, img)
-    for dosya, nesne, nokta, yuk, capa in FOTOLAR:
+    taban = img.copy()
+    yerlesim = []
+    for dosya, nesne, nokta, yuk, capa, dikey, arkasinda, halat in FOTOLAR:
         ust = nesne.matrix_world @ nokta
         alt = nesne.matrix_world @ (nokta - Vector((0, 0, yuk)))
         pu = world_to_camera_view(sc, sc.camera, ust)
@@ -601,8 +629,31 @@ def fotolari_ekle(cikti):
         olcek = hpx / foto.height
         foto = foto.resize((max(1, round(foto.width * olcek)), max(1, round(foto.height * olcek))), Image.LANCZOS)
         x = round(pu.x * W - foto.width * capa)
-        y = round((1 - pu.y) * H)
+        y = round((1 - pu.y) * H - foto.height * dikey)
+        if halat:
+            r1, r2, kanca_z = halat
+            fw, fh = foto.size
+            a, b = round(r1 * fh), round(r2 * fh)
+            kanca_alt = ust.z - (1 - dikey) * yuk
+            ek = max(0.0, kanca_alt - kanca_z) * hpx / yuk
+            orta = foto.crop((0, a, fw, b)).resize((fw, round(b - a + ek)), Image.BICUBIC)
+            yeni = Image.new("RGBA", (fw, a + orta.height + fh - b), (0, 0, 0, 0))
+            yeni.paste(foto.crop((0, 0, fw, a)), (0, 0))
+            yeni.paste(orta, (0, a))
+            yeni.paste(foto.crop((0, b, fw, fh)), (0, a + orta.height))
+            foto = yeni
+        yerlesim.append((foto, x, y, arkasinda))
+    for foto, x, y, _ in yerlesim:
         img.alpha_composite(foto, (x, y))
+    onekler = tuple(sorted({o for *_, a in yerlesim for o in a}))
+    if onekler:
+        yol = os.path.splitext(cikti)[0] + "_maske.png"
+        maske_render(onekler, yol)
+        m = Image.open(yol).convert("RGBA").getchannel("A")
+        os.remove(yol)
+        on = taban.copy()
+        on.putalpha(m)
+        img.alpha_composite(on)
     img.convert("RGB").save(cikti)
 
 
@@ -789,9 +840,10 @@ def portal_govde(M, g, span, z_ust, h, cift_ayak=True, ray_ust=0.0, kanca_z=1.6,
         bas_araba("bas_sag", span, -2.2, 2.2, M, g, z=ray_ust)
         kutu("kumanda_kabin", (0.6, 0.5, 0.9), (span - 0.0, -1.0, 1.6), M["antrasit"], g, bevel=0.01)
     if foto:
-        # Beta ürün fotoğrafı: ön kirişin alt başlığında yürüyen vinç
-        dosya, yuk, capa = foto
-        foto_vinc(dosya, g, (span * 0.47, -yk, z_ust - h + 0.02), yuk, capa=capa)
+        # Beta halatlı vinç arabası fotoğrafı: kiriş raylarının üstünde, halatlar ön kirişin arkasında
+        dosya, yuk, capa, dikey = foto
+        foto_vinc(dosya, g, (span * 0.47, 0, z_ust + 0.05), yuk, capa=capa, dikey=dikey,
+                  arkasinda=("kiris_on",), halat=(0.45, 0.60, 2.1))
     else:
         halatli_araba("araba", span * 0.47, z_ust + 0.05, yk, M, g, kanca_z=kanca_z)
 
@@ -813,7 +865,7 @@ def sahne_portal(M):
     ray("ray_sag", span, -RAY, RAY, M)
     g = bos("portal", (0, 0, 0.12))
     portal_govde(M, g, span, 6.6, 0.85, cift_ayak=True, kanca_z=1.4,
-                 foto=("kompakt_vinc.png", 1.6, 0.66) if BEYAZ else None)
+                 foto=("halatli_vinc_araba.png", 2.3, 0.5, 0.41) if BEYAZ else None)
     # yük: çelik sac paketi
     if not BEYAZ:
         yuk_kasa(M, (span * 0.47 - 0.15, -0.0, 0.0))
@@ -843,7 +895,7 @@ def sahne_yari_portal(M):
     g = bos("portal", (0, 0, 0.12))
     zust = 7.75
     portal_govde(M, g, span, zust, 0.85, cift_ayak=False, kanca_z=1.4,
-                 foto=("zincirli_vinc_2ton.png", 1.8, 0.62) if BEYAZ else None)
+                 foto=("halatli_vinc_araba.png", 2.3, 0.5, 0.41) if BEYAZ else None)
     # yol kirişi üzerindeki baş arabası
     bas_araba("bas_sag", span, -1.6, 1.6, M, g, z=6.68)
     kutu("sag_bas_baglanti", (0.5, 1.6, 0.25), (span, 0, zust - 0.85 - 0.12 + 0.0), M["turuncu"], g, bevel=0.01)
