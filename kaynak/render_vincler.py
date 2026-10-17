@@ -409,17 +409,28 @@ def kutu_kiris(name, x0, x1, y, z_ust, h, b, M, parent, logo_yuzu=False):
 
 
 def bas_araba(name, x, y0, y1, M, parent, z=0.0):
-    """Ray üzerinde tekerlekli baş arabası (Y doğrultusunda)."""
+    """Ray üzerinde baş arabası (Y doğrultusunda): ana kutu + iki tekerlek bloğu, tahrik grubu, tamponlar."""
     L = y1 - y0
     cy = (y0 + y1) / 2
-    kutu(name, (0.34, L, 0.36), (x, cy, z + 0.33), M["antrasit"], parent, bevel=0.01)
+    kutu(name, (0.34, L - 0.5, 0.30), (x, cy, z + 0.47), M["antrasit"], parent, bevel=0.01)
     for sy in (-1, 1):
-        yy = cy + sy * (L / 2 - 0.28)
-        silindir(f"{name}_tek{sy}", 0.17, 0.10, (x, yy, z + 0.20), M["antrasit"], parent, axis="X", bevel=0.006)
-        silindir(f"{name}_gobek{sy}", 0.06, 0.38, (x, yy, z + 0.20), M["celik"], parent, axis="X")
-        kutu(f"{name}_tampon{sy}", (0.12, 0.10, 0.12), (x, cy + sy * (L / 2 + 0.05), z + 0.33), M["siyah"], parent, bevel=0.02)
-    silindir(f"{name}_motor", 0.10, 0.34, (x + 0.30, cy + L / 2 - 0.28, z + 0.36), M["antrasit"], parent, axis="X", bevel=0.01)
-    kutu(f"{name}_red", (0.22, 0.28, 0.30), (x + 0.15, cy + L / 2 - 0.28, z + 0.26), M["turuncu"], parent, bevel=0.02)
+        yy = cy + sy * (L / 2 - 0.32)
+        # tekerlek bloğu: iki yan levha (alt yarıda tekerlek görünür)
+        for sx in (-1, 1):
+            kutu(f"{name}_blok{sy}{sx}", (0.025, 0.62, 0.36), (x + sx * 0.12, yy, z + 0.40), M["antrasit"], parent, bevel=0.004)
+            civata_izgara(f"{name}_blokc{sy}{sx}", (x + sx * 0.133, yy, z + 0.45), (0, 1, 0), (0, 0, 1), 3, 2, 0.2, 0.14,
+                          "X" if sx > 0 else "-X", M, parent, r=0.012)
+        kutu(f"{name}_blokust{sy}", (0.27, 0.62, 0.025), (x, yy, z + 0.57), M["antrasit"], parent, bevel=0.003)
+        silindir(f"{name}_tek{sy}", 0.17, 0.09, (x, yy, z + 0.20), M["celik"], parent, axis="X", bevel=0.004)
+        silindir(f"{name}_tekflans{sy}", 0.19, 0.02, (x - 0.05, yy, z + 0.20), M["celik"], parent, axis="X")
+        silindir(f"{name}_mil{sy}", 0.05, 0.34, (x, yy, z + 0.20), M["antrasit"], parent, axis="X")
+        kutu(f"{name}_tampon_govde{sy}", (0.16, 0.14, 0.16), (x, cy + sy * (L / 2 + 0.03), z + 0.40), M["antrasit"], parent, bevel=0.01)
+        silindir(f"{name}_tampon{sy}", 0.07, 0.12, (x, cy + sy * (L / 2 + 0.15), z + 0.40), M["siyah"], parent, axis="Y", bevel=0.01)
+    # tahrik grubu (motor + redüktör, tekerlek miline akuple)
+    yd = cy + L / 2 - 0.32
+    kutu(f"{name}_red", (0.22, 0.30, 0.30), (x + 0.25, yd, z + 0.30), M["turuncu"], parent, bevel=0.02)
+    silindir(f"{name}_motor", 0.10, 0.32, (x + 0.25, yd - 0.30, z + 0.36), M["antrasit"], parent, axis="Y", bevel=0.01)
+    silindir(f"{name}_fren", 0.105, 0.06, (x + 0.25, yd - 0.48, z + 0.36), M["siyah"], parent, axis="Y", bevel=0.005)
 
 
 def portal_ayak(name, x, y_alt, y_ust, z_alt, z_ust, M, parent):
@@ -434,6 +445,141 @@ def portal_ayak(name, x, y_alt, y_ust, z_alt, z_ust, M, parent):
     zc = z_alt + (z_ust - z_alt) * 0.45
     yc = y_alt + (y_ust - y_alt) * 0.45
     kutu(f"{name}_bag", (0.22, 2 * yc, 0.18), (x, 0, zc), M["turuncu"], parent, bevel=0.008)
+    for sy in (-1, 1):
+        # alt flanş cıvataları (baş arabasına)
+        for i, (dx, dy) in enumerate(((-0.17, -0.17), (0, -0.17), (0.17, -0.17), (0.17, 0), (0.17, 0.17),
+                                       (0, 0.17), (-0.17, 0.17), (-0.17, 0))):
+            civata(f"{name}_altc{sy}{i}", (x + dx, sy * y_alt + dy, z_alt + 0.031), "Z", M, parent, r=0.016)
+        # üst flanş: ayak başlık levhası + cıvatalar (uç kirişe)
+        kutu(f"{name}_ustflans{sy}", (0.60, 0.56, 0.035), (x, sy * y_ust, z_ust - 0.0175), M["turuncu"], parent, bevel=0.004)
+        for i in range(4):
+            for sx in (-1, 1):
+                civata(f"{name}_ustc{sy}{sx}{i}", (x + sx * 0.26, sy * y_ust - 0.21 + i * 0.14, z_ust - 0.036), "-Z", M, parent, r=0.016)
+        # ara bağlantı guse levhaları + cıvatalar
+        yb = sy * (yc - 0.12)
+        for sx in (-1, 1):
+            kutu(f"{name}_guse{sy}{sx}", (0.014, 0.42, 0.38), (x + sx * 0.118, yb, zc), M["turuncu"], parent, bevel=0.002)
+            civata_izgara(f"{name}_gusec{sy}{sx}", (x + sx * 0.126, yb, zc), (0, 1, 0), (0, 0, 1), 2, 2, 0.2, 0.2,
+                          "X" if sx > 0 else "-X", M, parent, r=0.014)
+
+
+
+# ---------------------------------------------------------------- bağlantı ve donanım detayları
+_CIVATA_MESH = {}
+
+
+def civata(name, loc, eksen, M, parent=None, r=0.014):
+    """Pullu altıgen cıvata başı; `eksen` başın baktığı yön ('X','-X','Y','-Y','Z','-Z')."""
+    if "m" not in _CIVATA_MESH:
+        bm = bmesh.new()
+        bmesh.ops.create_cone(bm, cap_ends=True, segments=6, radius1=1.0, radius2=1.0, depth=0.9,
+                              matrix=Matrix.Translation((0, 0, 0.75)))
+        bmesh.ops.create_cone(bm, cap_ends=True, segments=16, radius1=1.45, radius2=1.45, depth=0.3,
+                              matrix=Matrix.Translation((0, 0, 0.15)))
+        me = bm_to_mesh(bm, "civata_bas")
+        me.materials.append(M["celik"])
+        _CIVATA_MESH["m"] = me
+    o = bpy.data.objects.new(name, _CIVATA_MESH["m"])
+    bpy.context.scene.collection.objects.link(o)
+    o.location = loc
+    o.scale = (r, r, r)
+    rot = {"Z": (0, 0, 0), "-Z": (math.pi, 0, 0), "X": (0, math.pi / 2, 0), "-X": (0, -math.pi / 2, 0),
+           "Y": (-math.pi / 2, 0, 0), "-Y": (math.pi / 2, 0, 0)}[eksen]
+    o.rotation_euler = rot
+    o.parent = parent
+    return o
+
+
+def civata_izgara(name, merkez, u, v, nu, nv, au, av, eksen, M, parent=None, r=0.014):
+    """merkez etrafında u, v doğrultularında nu x nv cıvata dizisi."""
+    c, u, v = Vector(merkez), Vector(u), Vector(v)
+    for i in range(nu):
+        for j in range(nv):
+            p = c + u * ((i - (nu - 1) / 2) * au) + v * ((j - (nv - 1) / 2) * av)
+            civata(f"{name}_{i}_{j}", p, eksen, M, parent, r)
+
+
+def kablo(name, noktalar, r, mat, parent=None):
+    cu = bpy.data.curves.new(name, "CURVE")
+    cu.dimensions = "3D"
+    cu.bevel_depth = r
+    cu.bevel_resolution = 3
+    cu.use_fill_caps = True
+    sp = cu.splines.new("POLY")
+    sp.points.add(len(noktalar) - 1)
+    for pt, q in zip(sp.points, noktalar):
+        pt.co = (q[0], q[1], q[2], 1.0)
+    o = bpy.data.objects.new(name, cu)
+    bpy.context.scene.collection.objects.link(o)
+    cu.materials.append(mat)
+    o.parent = parent
+    return o
+
+
+def festoon(name, x0, x1, y, z, x_sabit, x_araba, M, parent, n=6, L=1.7, y_konsol=None, z_konsol=None, aralik=1.4):
+    """C raylı festoon kablo sistemi: ray, konsollar, kablo arabaları ve sarkan yassı kablolar.
+
+    x_sabit: kabloların sabit (besleme) ucu, x_araba: vinç arabasının yanındaki çekme arabası.
+    y_konsol/z_konsol: konsolların kirişe/boma bağlandığı nokta.
+    """
+    L_ray = x1 - x0
+    kutu(f"{name}_ray", (L_ray, 0.05, 0.05), ((x0 + x1) / 2, y, z), M["galvaniz"], parent, bevel=0.004)
+    kutu(f"{name}_ray_yarik", (L_ray, 0.012, 0.006), ((x0 + x1) / 2, y, z - 0.024), M["siyah"], parent, bevel=0.0)
+    if y_konsol is not None:
+        k = max(2, int(L_ray / aralik) + 1)
+        for i in range(k):
+            xk = x0 + 0.1 + i * (L_ray - 0.2) / (k - 1)
+            yk_, zk = y_konsol, z_konsol
+            # dikey ayak + yatay kol + rayı tutan kelepçe
+            kutu(f"{name}_konsol_ayak{i}", (0.05, 0.05, abs(z + 0.06 - zk)), (xk, yk_, (z + 0.06 + zk) / 2), M["antrasit"], parent, bevel=0.003)
+            kutu(f"{name}_konsol_kol{i}", (0.05, abs(yk_ - y) + 0.05, 0.05), (xk, (yk_ + y) / 2, z + 0.06), M["antrasit"], parent, bevel=0.003)
+            kutu(f"{name}_kelepce{i}", (0.07, 0.07, 0.02), (xk, y, z + 0.035), M["galvaniz"], parent, bevel=0.002)
+            civata(f"{name}_konsol_c{i}", (xk, y, z + 0.047), "Z", M, parent, r=0.009)
+    # kablo arabaları
+    yon = 1 if x_araba > x_sabit else -1
+    xs = [x_sabit + yon * 0.12 + i * (x_araba - x_sabit - yon * 0.12) / (n - 1) for i in range(n)]
+    for i, xa in enumerate(xs):
+        kutu(f"{name}_araba{i}", (0.10, 0.07, 0.05), (xa, y, z - 0.055), M["galvaniz"], parent, bevel=0.006)
+        kutu(f"{name}_tutucu{i}", (0.05, 0.12, 0.05), (xa, y, z - 0.105), M["siyah"], parent, bevel=0.008)
+    # sarkan kablolar (parabolik sehim, kablo boyu L sabit)
+    for i in range(n - 1):
+        a, b = xs[i], xs[i + 1]
+        s_ = abs(b - a)
+        d = math.sqrt(max(0.0, 3 * s_ * (L - s_) / 8))
+        for k, dy in enumerate((-0.035, 0.0, 0.035)):
+            pts = []
+            for t in range(17):
+                tt = t / 16
+                pts.append((a + (b - a) * tt, y + dy, z - 0.13 - 4 * d * tt * (1 - tt) * (1 - 0.06 * k)))
+            kablo(f"{name}_kablo{i}_{k}", pts, 0.011, M["siyah"], parent)
+    # sabit uçta buat kutusu
+    kutu(f"{name}_buat", (0.22, 0.12, 0.28), (x_sabit, y, z - 0.30), M["antrasit"], parent, bevel=0.01)
+    return xs
+
+
+def merdiven(name, p_alt, p_ust, genislik, M, parent, yan=Vector((0, 1, 0)), adim=0.3):
+    p0, p1 = Vector(p_alt), Vector(p_ust)
+    yan = Vector(yan).normalized() * (genislik / 2)
+    for sy in (-1, 1):
+        boru(f"{name}_dikme{sy}", p0 + yan * sy, p1 + yan * sy, 0.022, M["sari"], parent, seg=12)
+    n = int((p1 - p0).length / adim)
+    for i in range(1, n):
+        q = p0 + (p1 - p0) * (i / n)
+        boru(f"{name}_basamak{i}", q - yan, q + yan, 0.014, M["sari"], parent, seg=10)
+
+
+def kablo_tamburu(name, loc, M, parent, eksen="X"):
+    x, y, z = loc
+    silindir(f"{name}_flans1", 0.55, 0.02, (x - 0.12, y, z), M["antrasit"], parent, axis=eksen, bevel=0.004)
+    silindir(f"{name}_flans2", 0.55, 0.02, (x + 0.12, y, z), M["antrasit"], parent, axis=eksen, bevel=0.004)
+    silindir(f"{name}_sarim", 0.42, 0.22, (x, y, z), M["siyah"], parent, axis=eksen)
+    silindir(f"{name}_gobek", 0.08, 0.40, (x, y, z), M["celik"], parent, axis=eksen)
+    kutu(f"{name}_motor", (0.28, 0.26, 0.26), (x + 0.30, y, z), M["turuncu"], parent, bevel=0.02)
+    kutu(f"{name}_konsol", (0.08, 0.10, 0.75), (x - 0.18, y, z - 0.25), M["antrasit"], parent, bevel=0.004)
+    # kablo tamburun altından zemindeki kablo kanalına iner
+    kablo(f"{name}_kablo", [(x, y, z - 0.42), (x, y, 0.35), (x, y - 0.15, 0.08), (x, y - 0.6, 0.02), (x, y - 5.0, 0.02)],
+          0.018, M["siyah"], parent)
+    kutu(f"{name}_kanal", (0.16, 7.0, 0.012), (x, y - 3.2, -0.115), M["antrasit"], parent, bevel=0.002)
 
 
 # ---------------------------------------------------------------- hol ortamı
@@ -813,7 +959,11 @@ def sahne_duvar_pergel(M):
     boru("gergi", p1, p2, 0.048, M["turuncu"], g)
     kutu("gergi_ust_kulak", (0.16, 0.10, 0.08), (2.3, 0, zb - 0.34), M["antrasit"], g, bevel=0.008)
     silindir("gergi_ust_pim", 0.025, 0.14, (2.3, 0, zb - 0.36), M["celik"], g, axis="Y")
-    foto_vinc("zincirli_vinc_2ton.png", g, (3.25, 0, zb - 0.282), 1.25, capa=0.62, dikey=0.165)  # tekerlekler alt flanşta
+    civata_izgara("bom_kok_c", (0.14, -0.132, zb - 0.16), (1, 0, 0), (0, 0, 1), 2, 3, 0.12, 0.11, "-Y", M, g, r=0.013)
+    festoon("festoon", 0.3, 4.1, -0.27, zb + 0.07, 0.4, 3.25 - 0.42, M, g, n=5, L=1.1,
+            y_konsol=-0.07, z_konsol=zb, aralik=1.2)
+    foto_vinc("zincirli_vinc_2ton.png", g, (3.25, 0, zb - 0.282), 1.25, capa=0.62, dikey=0.165,
+              arkasinda=("festoon",))  # tekerlekler alt flanşta
     if not BEYAZ:
         palet(M, (4.6, 0.1, 0), 0.35)
     if YAN:
@@ -856,7 +1006,14 @@ def sahne_kolon_pergel(M):
     silindir("alt_bilezik", 0.205, 0.14, (0, 0, H - 0.75), M["antrasit"], g, seg=64, bevel=0.01)
     boru("gergi", (0.2, 0, H - 0.75), (2.3, 0, zb - 0.30), 0.048, M["turuncu"], g)
     kutu("gergi_ust_kulak", (0.16, 0.10, 0.08), (2.3, 0, zb - 0.34), M["antrasit"], g, bevel=0.008)
-    foto_vinc("kompakt_vinc.png", g, (3.45, 0, zb - 0.282), 1.10, capa=0.66, dikey=0.235)  # tekerlekler alt flanşta
+    civata_izgara("bom_kok_c", (0.22, -0.132, zb - 0.18), (1, 0, 0), (0, 0, 1), 2, 3, 0.11, 0.11, "-Y", M, g, r=0.013)
+    for i in range(10):
+        a_ = i * 2 * math.pi / 10
+        civata(f"bilezik_c{i}", (0.192 * math.cos(a_), 0.192 * math.sin(a_), H + 0.14), "Z", M, None, r=0.012)
+    festoon("festoon", 0.35, 4.3, -0.27, zb + 0.07, 0.45, 3.45 - 0.45, M, g, n=5, L=1.1,
+            y_konsol=-0.07, z_konsol=zb, aralik=1.2)
+    foto_vinc("kompakt_vinc.png", g, (3.45, 0, zb - 0.282), 1.10, capa=0.66, dikey=0.235,
+              arkasinda=("festoon",))  # tekerlekler alt flanşta
     if not BEYAZ:
         palet(M, (4.4, -0.6, 0), 0.3)
     if YAN:
@@ -936,13 +1093,44 @@ def portal_govde(M, g, span, z_ust, h, cift_ayak=True, ray_ust=0.0, kanca_z=1.6,
     else:
         ya = yk + 1.6 if yk > 1 else 1.7
         yu = yk if yk > 1 else 0.55
+        z_ayak = z_ust - 0.85 * h  # uç kirişin alt yüzü
         for ad, x in (("sol", 0.0), ("sag", span)) if cift_ayak else (("sol", 0.0),):
-            portal_ayak(f"ayak_{ad}", x, ya, yu, 0.62, zl, M, g)
+            portal_ayak(f"ayak_{ad}", x, ya, yu, 0.62, z_ayak, M, g)
             bas_araba(f"bas_{ad}", x, -ya - 0.5, ya + 0.5, M, g, z=ray_ust)
+        # uç kiriş - ana kiriş birleşimi: alın cıvataları ve yan ek levhaları
+        bkal = 0.5 if yk > 1 else 0.42
+        for x in (0.0, span):
+            sx = 1 if x > 0 else -1
+            for sy in (-1, 1):
+                civata_izgara(f"uc_birlesim{x:g}{sy}", (x + sx * 0.252, sy * yk, z_ust - h * 0.45), (0, 1, 0), (0, 0, 1),
+                              3, 5, 0.14, h * 0.15, "X" if sx > 0 else "-X", M, g, r=0.015)
+                yy = sy * (yk + bkal / 2 + 0.008)
+                kutu(f"ek_levha{x:g}{sy}", (0.36, 0.014, h * 0.82), (x - sx * 0.43, yy, z_ust - h / 2), M["turuncu"], g, bevel=0.003)
+                civata_izgara(f"ek_levhac{x:g}{sy}", (x - sx * 0.43, yy + sy * 0.008, z_ust - h / 2), (1, 0, 0), (0, 0, 1),
+                              2, 5, 0.2, h * 0.15, "Y" if sy > 0 else "-Y", M, g, r=0.014)
+        # ray sonu tamponları
+        for x in ((0.0, span) if cift_ayak else (0.0,)):
+            for sy in (-1, 1):
+                kutu(f"ray_stop{x:g}{sy}", (0.3, 0.25, 0.35), (x, sy * (RAY - 0.1), 0.175), M["antrasit"], bevel=0.01)
+                silindir(f"ray_tampon{x:g}{sy}", 0.09, 0.14, (x, sy * (RAY - 0.3), 0.3), M["siyah"], axis="Y", bevel=0.01)
+        if yakin_x is not None:
+            # yakın uçtaki ön ayakta merdiven, yakın ayakta besleme kablo tamburu
+            sxn = 1 if yakin_x > 0 else -1
+            dis = sxn * 0.28
+            merdiven("merdiven", (yakin_x + dis, -ya + 0.15, 0.9), (yakin_x + dis, -yu - 0.1, z_ayak - 0.2), 0.42, M, g,
+                     yan=Vector((1, 0, 0)))
+            kablo_tamburu("tambur", (yakin_x + sxn * 0.55, ya * 0.62, 2.4), M, g)
+        # festoon (ön kirişin dış yanında): sabit uç uzak kiriş başında, çekme arabası vinç arabasının yanında
+        if foto:
+            yf = -(yk + bkal / 2 + 0.32)
+            x_tr = span * (0.36 if (yakin_x or 0) > 0 else 0.58)
+            x_sabit = 0.35 if (yakin_x or 0) > 0 else span - 0.35
+            festoon("festoon", 0.2, span - 0.2, yf, z_ust + 0.22, x_sabit, x_tr + (-0.75 if x_tr > x_sabit else 0.75),
+                    M, g, n=6, L=1.8, y_konsol=-(yk + bkal / 2 + 0.03), z_konsol=z_ust)
     if foto:
         # Beta halatlı vinç arabası fotoğrafı: iki kirişin raylarına basar
         dosya, yuk, capa, dikey = foto
-        onunde = ["kiris_on"]
+        onunde = ["kiris_on", "festoon", "ek_levha"]
         if yakin_x is not None:
             onunde += [f"bas_kirisi{yakin_x:g}", "ayak_sag" if yakin_x > 0 else "ayak_sol"]
         xa = span * (0.36 if (yakin_x or 0) > 0 else 0.58)
