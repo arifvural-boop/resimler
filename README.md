@@ -5,8 +5,10 @@ ile fotoğraf gerçekliğinde, gölgesiz düz beyaz arka plan üzerinde ve oriji
 gibi tam yandan görünüşle render edildi (eski 3/4 açı için: GORUNUS=capraz). Marka renkleri ve "beta" logosu korundu.
 
 Vinçler modellenmedi; Beta'nın gerçek ürün fotoğrafları (`kaynak/vinc_foto/`,
-beyaz zemini temizlenmiş) sahnedeki gerçek ölçülü bir düzleme oturtulup, köşeleri kameraya
-izdüşürülerek homografi ile perspektifli bükülüp eklendi (bom / kirişle aynı kaçış):
+beyaz zemini temizlenmiş) gerçek ölçüsünde eklendi. Sahne kamerası her fotoğrafın çekim
+açısına göre ayarlandı: pergel bomu fotoğraftaki vinçle aynı açıya döndürüldü (duvar tipi
+~20°, kolon tipi ~45°), portallerde kamera araba fotoğrafı gibi ~9° yukarıdan bakar; dikeyler
+mercek kaydırmayla dik tutuldu. Arabaların tekerlekleri bom alt flanşına / kiriş rayına oturur:
 
 - Duvar tipi pergel → 2 ton zincirli vinç (`zincirli_vinc_2ton.png`)
 - Kolon tipi pergel → kompakt vinç (`kompakt_vinc.png`)

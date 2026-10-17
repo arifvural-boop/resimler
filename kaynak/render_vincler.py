@@ -576,18 +576,19 @@ def ortam(M, **kw):
 
 
 def foto_vinc(dosya, nesne, nokta, yukseklik, capa=0.5, dikey=0.0, arkasinda=(), halat=None,
-              eksen=(1, 0, 0)):
+              eksen=None):
     """Gerçek ürün fotoğrafını sahnedeki bir düzleme perspektifli olarak yerleştir.
 
-    Fotoğraf, `nesne` yerel koordinatlarında `eksen` (yatay) ve Z (düşey) doğrultularının
-    oluşturduğu düzleme gerçek ölçüsünde (yükseklik m) oturtulur; dört köşesi kameraya
-    izdüşürülüp homografi ile bükülür.
+    Fotoğraf gerçek ölçüsünde (yükseklik m) bir düzleme oturtulur; dört köşesi kameraya
+    izdüşürülüp homografi ile bükülür. eksen=None: düzlem kameraya diktir (fotoğraf kendi
+    perspektifini taşır; sahne kamerası fotoğrafın çekim açısına göre ayarlanır).
+    eksen verilirse düzlem `nesne` yerel `eksen` (yatay) ve Z doğrultularındadır.
     nokta: fotoğrafın yatayda `capa`, düşeyde `dikey` oranına (0 = üst kenar) denk gelen nokta,
     arkasinda: fotoğrafın önünde kalacak nesnelerin ad önekleri (ör. ön kiriş),
     halat: (ust_oran, alt_oran, kanca_z) - yalnız halat bandını uzatıp kancayı kanca_z'ye indirir.
     """
     FOTOLAR.append((os.path.join(FOTO_KLASOR, dosya), nesne, Vector(nokta), yukseklik, capa, dikey,
-                    tuple(arkasinda), halat, Vector(eksen).normalized()))
+                    tuple(arkasinda), halat, None if eksen is None else Vector(eksen).normalized()))
 
 
 def _homografi(hedef, kaynak):
@@ -659,10 +660,17 @@ def fotolari_ekle(cikti):
             yuk = yuk + ek_m
             dikey = ust_m / yuk
         mw = nesne.matrix_world
-        z = Vector((0, 0, 1))
+        A = mw @ nokta
+        if eksen is None:
+            cm = sc.camera.matrix_world.to_3x3()
+            eksen = (cm @ Vector((1, 0, 0))).normalized()
+            z = (cm @ Vector((0, 1, 0))).normalized()
+        else:
+            eksen = (mw.to_3x3() @ eksen).normalized()
+            z = Vector((0, 0, 1))
 
         def kose(fx, fy, u=eksen):
-            return ekran(mw @ (nokta + u * ((fx - capa) * gen) + z * ((dikey - fy) * yuk)))
+            return ekran(A + u * ((fx - capa) * gen) + z * ((dikey - fy) * yuk))
 
         # fotoğraf ayna görüntüsü olmasın: sol kenar ekranda solda kalsın
         if kose(0, dikey)[0] > kose(1, dikey)[0]:
@@ -694,7 +702,7 @@ def dunya(guc=0.6):
     bg.inputs["Strength"].default_value = guc
 
 
-def kamera(loc, hedef, lens=35, dof=None):
+def kamera(loc, hedef, lens=35, dof=None, kaydir=False):
     cd = bpy.data.cameras.new("kamera")
     cd.lens = lens
     cd.sensor_width = 36
@@ -702,6 +710,11 @@ def kamera(loc, hedef, lens=35, dof=None):
     bpy.context.scene.collection.objects.link(co)
     co.location = loc
     d = Vector(hedef) - Vector(loc)
+    if kaydir:
+        # mimari kamera: yatay bakış + mercek kaydırma, dikeyler dik kalır (ürün fotoğrafları gibi)
+        yatay = Vector((d.x, d.y, 0))
+        cd.shift_y = d.z / yatay.length * lens / cd.sensor_width
+        d = yatay
     co.rotation_euler = d.to_track_quat("-Z", "Y").to_euler()
     bpy.context.scene.camera = co
     if dof:
@@ -777,7 +790,7 @@ def sahne_duvar_pergel(M):
     beton = boya("beton_kolon", (0.36, 0.36, 0.345, 1), rough=0.85, var=0.1, bump=0.4)
     kutu("bina_kolon", (0.6, 0.6, 12.0), (-0.3, 0, 6.0), beton, bevel=0.01)
     # dönen grup (mafsal ekseni x=0.12)
-    g = bos("pergel", (0.12, 0, 0), (0, 0, 0 if YAN else math.radians(18)))
+    g = bos("pergel", (0.12, 0, 0), (0, 0, math.radians(20 if YAN else 18)))  # zincirli vinç fotoğrafı ~20° soldan
     # duvar konsolu (sabit)
     kutu("konsol_plaka", (0.03, 0.42, 2.0), (0.015, 0, 3.4), M["antrasit"], bevel=0.004)
     for z in (4.15, 2.75):
@@ -804,7 +817,7 @@ def sahne_duvar_pergel(M):
     if not BEYAZ:
         palet(M, (4.6, 0.1, 0), 0.35)
     if YAN:
-        kamera((2.3, -10.0, 2.7), (2.3, 0, 2.7), lens=48)
+        kamera((2.0, -10.0, 3.9), (2.0, 0, 2.65), lens=46, kaydir=True)
     else:
         kamera((4.6, -5.6, 2.6), (2.1, 0.3, 3.05), lens=34, dof=9)
     anahtar_isik((4, -9, 8), (2, 0, 2), 1800, boyut=6)
@@ -830,7 +843,7 @@ def sahne_kolon_pergel(M):
     silindir("kolon", 0.17, H, (0, 0, H / 2 + 0.06), M["gri"], seg=64)
     silindir("kolon_bilezik", 0.20, 0.16, (0, 0, H + 0.06), M["antrasit"], seg=64, bevel=0.01)
     # dönen grup
-    g = bos("pergel", (0, 0, 0), (0, 0, 0 if YAN else math.radians(15)))
+    g = bos("pergel", (0, 0, 0), (0, 0, math.radians(45 if YAN else 15)))  # kompakt vinç fotoğrafı ~45° soldan
     zb = H + 0.48
     silindir("baslik", 0.215, 0.36, (0, 0, H + 0.30), M["antrasit"], g, seg=64, bevel=0.01)
     silindir("baslik_serit", 0.217, 0.05, (0, 0, H + 0.42), M["turuncu"], g, seg=64)
@@ -847,7 +860,7 @@ def sahne_kolon_pergel(M):
     if not BEYAZ:
         palet(M, (4.4, -0.6, 0), 0.3)
     if YAN:
-        kamera((2.2, -10.0, 2.55), (2.2, 0, 2.55), lens=42)
+        kamera((1.6, -10.0, 4.3), (1.6, 0, 2.45), lens=42, kaydir=True)
     else:
         kamera((4.4, -6.6, 2.4), (2.0, 0.3, 2.65), lens=32, dof=9)
     anahtar_isik((3, -9, 8), (1.5, 0, 2), 1800, boyut=6)
@@ -922,7 +935,7 @@ def portal_govde(M, g, span, z_ust, h, cift_ayak=True, ray_ust=0.0, kanca_z=1.6,
         # Beta halatlı vinç arabası fotoğrafı: kiriş raylarının üstünde, halatlar ön kirişin arkasında
         dosya, yuk, capa, dikey = foto
         foto_vinc(dosya, g, (span * 0.47, 0, z_ust + 0.05), yuk, capa=capa, dikey=dikey,
-                  arkasinda=("kiris_on",), halat=(0.45, 0.60, kanca_z), eksen=(1, 0, 0))
+                  arkasinda=("kiris_on",), halat=(0.45, 0.60, kanca_z))
     else:
         halatli_araba("araba", span * 0.47, z_ust + 0.05, yk, M, g, kanca_z=kanca_z)
 
@@ -950,7 +963,7 @@ def sahne_portal(M):
     if not BEYAZ:
         yuk_kasa(M, (span * 0.47 - 0.15, -0.0, 0.0))
     if YAN:
-        kamera((span / 2, -19.5, 4.1), (span / 2, 0, 4.1), lens=42)
+        kamera((span / 2, -19.5, 10.3), (span / 2, 0, 4.0), lens=42, kaydir=True)  # araba fotoğrafı ~9° yukarıdan
     else:
         kamera((13.4, -11.0, 1.8), (5.4, 0.0, 3.7), lens=24, dof=12)
     anahtar_isik((4, -12, 10), (5, 0, 3), 3500, boyut=8)
@@ -986,7 +999,7 @@ def sahne_yari_portal(M):
     if not BEYAZ:
         yuk_kasa(M, (span * 0.47 - 0.15, 0.0, 0.0))
     if YAN:
-        kamera((6.2, -20.5, 4.6), (6.2, 0, 4.6), lens=42)
+        kamera((6.2, -20.5, 11.3), (6.2, 0, 4.4), lens=42, kaydir=True)
     else:
         kamera((-2.2, -11.6, 1.8), (6.0, 0.4, 4.3), lens=24, dof=12)
     anahtar_isik((8, -12, 10), (6, 0, 3), 3500, boyut=8)
