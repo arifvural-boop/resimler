@@ -561,6 +561,53 @@ def hol(M, arka_y=9.0, sol_x=-14.0, sag_x=18.0, yukseklik=12.0, kolon_aks=6.0):
     return zemin
 
 
+BEYAZ = os.environ.get("ORTAM", "beyaz") == "beyaz"
+FOTO_KLASOR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "vinc_foto")
+RAY = 6.0 if BEYAZ else 30.0
+FOTOLAR = []  # (dosya, nesne, yerel_nokta, yukseklik_m, yatay_capa)
+
+
+def ortam(M, **kw):
+    """Beyaz stüdyo (gölge yakalayıcı zemin) veya fabrika holü."""
+    if not BEYAZ:
+        return hol(M, **kw)
+    z = duzlem("zemin", (120, 120), (0, 0, 0), (0, 0, 0), boya("zemin_beyaz", (0.9, 0.9, 0.9, 1), rough=0.6, var=0))
+    z.is_shadow_catcher = True
+    return z
+
+
+def foto_vinc(dosya, nesne, nokta, yukseklik, capa=0.5):
+    """Gerçek ürün fotoğrafını, kirişin alt başlığına oturacak şekilde render sonrası ekle."""
+    FOTOLAR.append((os.path.join(FOTO_KLASOR, dosya), nesne, Vector(nokta), yukseklik, capa))
+
+
+def fotolari_ekle(cikti):
+    from bpy_extras.object_utils import world_to_camera_view
+    from PIL import Image
+
+    sc = bpy.context.scene
+    bpy.context.view_layer.update()
+    W = int(sc.render.resolution_x * sc.render.resolution_percentage / 100)
+    H = int(sc.render.resolution_y * sc.render.resolution_percentage / 100)
+    img = Image.open(cikti).convert("RGBA")
+    if BEYAZ:
+        zemin = Image.new("RGBA", img.size, (255, 255, 255, 255))
+        img = Image.alpha_composite(zemin, img)
+    for dosya, nesne, nokta, yuk, capa in FOTOLAR:
+        ust = nesne.matrix_world @ nokta
+        alt = nesne.matrix_world @ (nokta - Vector((0, 0, yuk)))
+        pu = world_to_camera_view(sc, sc.camera, ust)
+        pa = world_to_camera_view(sc, sc.camera, alt)
+        hpx = (pu.y - pa.y) * H
+        foto = Image.open(dosya).convert("RGBA")
+        olcek = hpx / foto.height
+        foto = foto.resize((max(1, round(foto.width * olcek)), max(1, round(foto.height * olcek))), Image.LANCZOS)
+        x = round(pu.x * W - foto.width * capa)
+        y = round((1 - pu.y) * H)
+        img.alpha_composite(foto, (x, y))
+    img.convert("RGB").save(cikti)
+
+
 def dunya(guc=0.6):
     w = bpy.data.worlds.new("dunya")
     bpy.context.scene.world = w
@@ -618,17 +665,17 @@ def render_ayarlari(cikti, ornek):
     sc.render.resolution_x = 1600
     sc.render.resolution_y = 1200
     sc.render.resolution_percentage = int(os.environ.get("YUZDE", "100"))
-    sc.render.film_transparent = False
+    sc.render.film_transparent = BEYAZ
     sc.render.image_settings.file_format = "PNG"
     sc.render.image_settings.color_depth = "8"
     sc.render.filepath = cikti
     vs = sc.view_settings
     try:
         vs.view_transform = "AgX"
-        vs.look = "AgX - Medium High Contrast"
+        vs.look = "AgX - Punchy" if BEYAZ else "AgX - Medium High Contrast"
     except Exception:
         pass
-    vs.exposure = 0.0
+    vs.exposure = -0.3 if BEYAZ else 0.0
     sc.render.threads_mode = "AUTO"
 
 
@@ -648,7 +695,7 @@ def bom_logo(M, g, x, zb):
 
 
 def sahne_duvar_pergel(M):
-    hol(M, arka_y=7.0)
+    ortam(M, arka_y=7.0)
     # bina betonarme kolonu
     beton = boya("beton_kolon", (0.36, 0.36, 0.345, 1), rough=0.85, var=0.1, bump=0.4)
     kutu("bina_kolon", (0.6, 0.6, 12.0), (-0.3, 0, 6.0), beton, bevel=0.01)
@@ -664,28 +711,27 @@ def sahne_duvar_pergel(M):
             silindir(f"civata{zz}{yy}", 0.018, 0.04, (0.04, yy, zz), M["celik"], axis="X", seg=6)
     # bom (IPE 300)
     zb = 4.30
-    ipe("bom", 0.12, 5.2, zb, 0.30, 0.15, M["turuncu"], g, tf=0.018, tw=0.011)
+    ipe("bom", 0.12, 4.2, zb, 0.30, 0.15, M["turuncu"], g, tf=0.018, tw=0.011)
     kutu("bom_kok", (0.24, 0.26, 0.40), (0.14, 0, zb - 0.16), M["turuncu"], g, bevel=0.02)
-    kutu("bom_uc", (0.02, 0.22, 0.34), (5.21, 0, zb - 0.15), M["antrasit"], g, bevel=0.004)
-    bom_logo(M, g, 1.55, zb)
+    kutu("bom_uc", (0.02, 0.22, 0.34), (4.21, 0, zb - 0.15), M["antrasit"], g, bevel=0.004)
+    bom_logo(M, g, 1.25, zb)
     for sy in (-1, 1):
-        kutu(f"stoper{sy}", (0.05, 0.03, 0.06), (5.12, sy * 0.06, zb - 0.33), M["siyah"], g, bevel=0.01)
+        kutu(f"stoper{sy}", (0.05, 0.03, 0.06), (4.12, sy * 0.06, zb - 0.33), M["siyah"], g, bevel=0.01)
     # gergi
     p1 = (0.18, 0, 2.75)
-    p2 = (2.8, 0, zb - 0.30)
+    p2 = (2.3, 0, zb - 0.30)
     boru("gergi", p1, p2, 0.048, M["turuncu"], g)
-    kutu("gergi_ust_kulak", (0.16, 0.10, 0.08), (2.8, 0, zb - 0.34), M["antrasit"], g, bevel=0.008)
-    silindir("gergi_ust_pim", 0.025, 0.14, (2.8, 0, zb - 0.36), M["celik"], g, axis="Y")
-    # zincirli vinç
-    zincirli_palanga("palanga", 3.9, zb - 0.30, 0.15, M, g, kanca_z=1.15)
-    # çevre detayları
-    palet(M, (4.6, 0.1, 0), 0.35)
-    kamera((5.0, -7.4, 2.2), (2.55, 0.2, 2.7), lens=32, dof=9)
+    kutu("gergi_ust_kulak", (0.16, 0.10, 0.08), (2.3, 0, zb - 0.34), M["antrasit"], g, bevel=0.008)
+    silindir("gergi_ust_pim", 0.025, 0.14, (2.3, 0, zb - 0.36), M["celik"], g, axis="Y")
+    foto_vinc("zincirli_vinc_2ton.png", g, (3.25, 0, zb - 0.285), 1.05, capa=0.62)
+    if not BEYAZ:
+        palet(M, (4.6, 0.1, 0), 0.35)
+    kamera((4.6, -5.6, 2.6), (2.1, 0.3, 3.05), lens=34, dof=9)
     anahtar_isik((4, -9, 8), (2, 0, 2), 1800, boyut=6)
 
 
 def sahne_kolon_pergel(M):
-    hol(M, arka_y=7.0)
+    ortam(M, arka_y=7.0)
     # temel ve taban
     temel = boya("temel", (0.30, 0.30, 0.29, 1), rough=0.8, var=0.1, bump=0.3)
     kutu("temel", (1.4, 1.4, 0.04), (0, 0, 0.0), temel, bevel=0.005)
@@ -709,17 +755,18 @@ def sahne_kolon_pergel(M):
     silindir("baslik", 0.215, 0.36, (0, 0, H + 0.30), M["antrasit"], g, seg=64, bevel=0.01)
     silindir("baslik_serit", 0.217, 0.05, (0, 0, H + 0.42), M["turuncu"], g, seg=64)
     silindir("baslik_kapak", 0.23, 0.04, (0, 0, H + 0.50), M["antrasit"], g, seg=64, bevel=0.008)
-    ipe("bom", 0.18, 5.4, zb, 0.30, 0.15, M["turuncu"], g, tf=0.018, tw=0.011)
+    ipe("bom", 0.18, 4.4, zb, 0.30, 0.15, M["turuncu"], g, tf=0.018, tw=0.011)
     kutu("bom_kok", (0.22, 0.26, 0.40), (0.22, 0, zb - 0.18), M["turuncu"], g, bevel=0.02)
-    kutu("bom_uc", (0.02, 0.22, 0.34), (5.41, 0, zb - 0.15), M["antrasit"], g, bevel=0.004)
-    bom_logo(M, g, 1.5, zb)
+    kutu("bom_uc", (0.02, 0.22, 0.34), (4.41, 0, zb - 0.15), M["antrasit"], g, bevel=0.004)
+    bom_logo(M, g, 1.3, zb)
     # gergi (kolon bileziğinden)
     silindir("alt_bilezik", 0.205, 0.14, (0, 0, H - 0.75), M["antrasit"], g, seg=64, bevel=0.01)
-    boru("gergi", (0.2, 0, H - 0.75), (2.7, 0, zb - 0.30), 0.048, M["turuncu"], g)
-    kutu("gergi_ust_kulak", (0.16, 0.10, 0.08), (2.7, 0, zb - 0.34), M["antrasit"], g, bevel=0.008)
-    zincirli_palanga("palanga", 4.1, zb - 0.30, 0.15, M, g, kanca_z=1.25)
-    palet(M, (4.4, -0.6, 0), 0.3)
-    kamera((4.8, -7.6, 2.1), (2.35, 0.2, 2.75), lens=32, dof=9)
+    boru("gergi", (0.2, 0, H - 0.75), (2.3, 0, zb - 0.30), 0.048, M["turuncu"], g)
+    kutu("gergi_ust_kulak", (0.16, 0.10, 0.08), (2.3, 0, zb - 0.34), M["antrasit"], g, bevel=0.008)
+    foto_vinc("kompakt_vinc.png", g, (3.45, 0, zb - 0.285), 0.95, capa=0.66)
+    if not BEYAZ:
+        palet(M, (4.4, -0.6, 0), 0.3)
+    kamera((4.4, -6.6, 2.4), (2.0, 0.3, 2.65), lens=32, dof=9)
     anahtar_isik((3, -9, 8), (1.5, 0, 2), 1800, boyut=6)
 
 
@@ -757,43 +804,46 @@ def ray(name, x, y0, y1, M):
 
 
 def sahne_portal(M):
-    hol(M, arka_y=9.5, sol_x=-9.0, sag_x=22.0)
+    ortam(M, arka_y=9.5, sol_x=-9.0, sag_x=22.0)
     span = 11.0
-    ray("ray_sol", 0.0, -30, 30, M)
-    ray("ray_sag", span, -30, 30, M)
+    ray("ray_sol", 0.0, -RAY, RAY, M)
+    ray("ray_sag", span, -RAY, RAY, M)
     g = bos("portal", (0, 0, 0.12))
     portal_govde(M, g, span, 6.6, 0.85, cift_ayak=True, kanca_z=1.4)
     # yük: çelik sac paketi
-    yuk_kasa(M, (span * 0.47 - 0.15, -0.0, 0.0))
+    if not BEYAZ:
+        yuk_kasa(M, (span * 0.47 - 0.15, -0.0, 0.0))
     kamera((13.4, -11.0, 1.8), (5.4, 0.0, 3.7), lens=24, dof=12)
     anahtar_isik((4, -12, 10), (5, 0, 3), 3500, boyut=8)
 
 
 def sahne_yari_portal(M):
-    hol(M, arka_y=9.5, sol_x=-9.0)
+    ortam(M, arka_y=9.5, sol_x=-9.0)
     span = 11.0
     # sağda betonarme bina kolonları + yürüyüş yolu kirişi
     beton = boya("beton_kolon", (0.36, 0.36, 0.345, 1), rough=0.85, var=0.1, bump=0.4)
     kx = span + 0.75
-    for i, y in enumerate((-12, -6, 0, 6, 12)):
+    for i, y in enumerate((-3.5, 3.5) if BEYAZ else (-12, -6, 0, 6, 12)):
         kutu(f"bina_kolon{i}", (0.6, 0.6, 12), (kx, y, 6), beton, bevel=0.01)
         kutu(f"konsol{i}", (0.6, 0.6, 0.6), (kx - 0.55, y, 6.0), beton, bevel=0.01)
-    duzlem("sag_duvar", (80, 12), (kx + 0.3, 0, 6), (math.pi / 2, 0, math.pi / 2),
-           boya("sag_duvar_boya", (0.42, 0.43, 0.44, 1), rough=0.8, var=0.08, bump=0.2))
-    ipe("yol_kirisi", -12.3, 30, 6.75, 0.5, 0.3, M["antrasit"], None, tf=0.025, tw=0.014)
+    if not BEYAZ:
+        duzlem("sag_duvar", (80, 12), (kx + 0.3, 0, 6), (math.pi / 2, 0, math.pi / 2),
+               boya("sag_duvar_boya", (0.42, 0.43, 0.44, 1), rough=0.8, var=0.08, bump=0.2))
+    ipe("yol_kirisi", -3.8 if BEYAZ else -12.3, 3.8 if BEYAZ else 30, 6.75, 0.5, 0.3, M["antrasit"], None, tf=0.025, tw=0.014)
     # X boyunca üretildi; Y boyunca döndür ve kolon hizasına taşı
     yk = bpy.data.objects["yol_kirisi"]
     yk.rotation_euler = (0, 0, math.pi / 2)
     yk.location = (span, 0, 0)
-    kutu("yol_rayi", (0.06, 42.3, 0.05), (span, 8.85, 6.775), M["ray"], bevel=0.004)
-    ray("ray_sol", 0.0, -30, 30, M)
+    kutu("yol_rayi", (0.06, 7.6 if BEYAZ else 42.3, 0.05), (span, 0 if BEYAZ else 8.85, 6.775), M["ray"], bevel=0.004)
+    ray("ray_sol", 0.0, -RAY, RAY, M)
     g = bos("portal", (0, 0, 0.12))
     zust = 7.75
     portal_govde(M, g, span, zust, 0.85, cift_ayak=False, kanca_z=1.4)
     # yol kirişi üzerindeki baş arabası
     bas_araba("bas_sag", span, -1.6, 1.6, M, g, z=6.68)
     kutu("sag_bas_baglanti", (0.5, 1.6, 0.25), (span, 0, zust - 0.85 - 0.12 + 0.0), M["turuncu"], g, bevel=0.01)
-    yuk_kasa(M, (span * 0.47 - 0.15, 0.0, 0.0))
+    if not BEYAZ:
+        yuk_kasa(M, (span * 0.47 - 0.15, 0.0, 0.0))
     kamera((-2.2, -11.6, 1.8), (6.0, 0.4, 4.3), lens=24, dof=12)
     anahtar_isik((8, -12, 10), (6, 0, 3), 3500, boyut=8)
 
@@ -839,10 +889,15 @@ def main():
     MATS.clear()
     FONT = font_yukle()
     M = malzemeler()
-    dunya(0.12)
+    FOTOLAR.clear()
+    dunya(0.4 if BEYAZ else 0.12)
     SAHNELER[sahne](M)
+    if BEYAZ:
+        # stüdyo dolgu ışığı
+        anahtar_isik((-6, -8, 7), (2, 0, 2), 900, boyut=8, renk=(0.95, 0.97, 1.0))
     render_ayarlari(cikti, ornek)
     bpy.ops.render.render(write_still=True)
+    fotolari_ekle(cikti)
 
 
 if __name__ == "__main__":
