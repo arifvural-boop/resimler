@@ -722,7 +722,7 @@ def ortam(M, **kw):
 
 
 def foto_vinc(dosya, nesne, nokta, yukseklik, capa=0.5, dikey=0.0, arkasinda=(), halat=None,
-              eksen=None, genislik_carpani=1.0):
+              eksen=None, genislik_carpani=1.0, kirp_ust=0.0):
     """Gerçek ürün fotoğrafını sahnedeki bir düzleme perspektifli olarak yerleştir.
 
     Fotoğraf gerçek ölçüsünde (yükseklik m) bir düzleme oturtulur; dört köşesi kameraya
@@ -730,12 +730,15 @@ def foto_vinc(dosya, nesne, nokta, yukseklik, capa=0.5, dikey=0.0, arkasinda=(),
     perspektifini taşır; sahne kamerası fotoğrafın çekim açısına göre ayarlanır).
     eksen verilirse düzlem `nesne` yerel `eksen` (yatay) ve Z doğrultularındadır; fotoğraf aynı açıdan
     çekilmişse genislik_carpani=1/cos(açı) kendi kısalmasını telafi eder (perspektif iki kez uygulanmaz).
+    kirp_ust: fotoğrafın üstten bu oranı atılır (ör. arabası 3B modellenen caraskalda yalnız gövde kalır);
+    yukseklik kırpılmamış fotoğrafın yüksekliğidir.
     nokta: fotoğrafın yatayda `capa`, düşeyde `dikey` oranına (0 = üst kenar) denk gelen nokta,
     arkasinda: fotoğrafın önünde kalacak nesnelerin ad önekleri (ör. ön kiriş),
     halat: (ust_oran, alt_oran, kanca_z) - yalnız halat bandını uzatıp kancayı kanca_z'ye indirir.
     """
     FOTOLAR.append((os.path.join(FOTO_KLASOR, dosya), nesne, Vector(nokta), yukseklik, capa, dikey,
-                    tuple(arkasinda), halat, None if eksen is None else Vector(eksen).normalized(), genislik_carpani))
+                    tuple(arkasinda), halat, None if eksen is None else Vector(eksen).normalized(), genislik_carpani,
+                    kirp_ust))
 
 
 def _homografi(hedef, kaynak):
@@ -788,8 +791,11 @@ def fotolari_ekle(cikti):
         return (q.x * W, (1 - q.y) * H)
 
     yerlesim = []
-    for dosya, nesne, nokta, yuk, capa, dikey, arkasinda, halat, eksen, gcarp in FOTOLAR:
+    for dosya, nesne, nokta, yuk, capa, dikey, arkasinda, halat, eksen, gcarp, kirp in FOTOLAR:
         foto = Image.open(dosya).convert("RGBA")
+        if kirp:
+            foto = foto.crop((0, round(kirp * foto.height), foto.width, foto.height))
+            yuk *= 1 - kirp
         fw, fh = foto.size
         gen = yuk * fw / fh * gcarp
         if halat:
@@ -941,6 +947,40 @@ def foto_kamera(g, nokta, sapma, yukseklik, uzaklik, hedef, lens):
     kamera(tuple(cam), (hedef.x, hedef.y, hedef.z), lens=lens, kaydir=True)
 
 
+def monoray_araba(name, x, z_alt, b, tf, M, g):
+    """Bomun alt flanşında yürüyen elektrikli caraskal arabası (Beta 2 ton arabasına benzer).
+
+    z_alt: bom alt yüzü, b: flanş genişliği, tf: flanş kalınlığı. Askı kulağının alt kotunu döndürür.
+    """
+    zf = z_alt + tf  # flanş üst yüzü = tekerlek basma kotu
+    r = 0.045
+    yp = b / 2 + 0.035  # yan levhalar flanşın dışında
+    for sy in (-1, 1):
+        kutu(f"{name}_levha{sy}", (0.34, 0.016, 0.24), (x, sy * yp, zf + 0.03), M["antrasit"], g, bevel=0.004)
+        for sx in (-1, 1):
+            # tekerlek flanş üstünde, web ile yan levha arasında
+            silindir(f"{name}_tek{sy}{sx}", r, 0.032, (x + sx * 0.11, sy * (b / 4 + 0.012), zf + r), M["celik"], g, axis="Y", bevel=0.003)
+            silindir(f"{name}_tekflans{sy}{sx}", r + 0.008, 0.006, (x + sx * 0.11, sy * (b / 2 - 0.004), zf + r), M["celik"], g, axis="Y")
+            silindir(f"{name}_aks{sy}{sx}", 0.012, 0.06, (x + sx * 0.11, sy * (yp - 0.02), zf + r), M["celik"], g, axis="Y")
+            civata(f"{name}_akssomun{sy}{sx}", (x + sx * 0.11, sy * (yp + 0.008), zf + r), "Y" if sy > 0 else "-Y", M, g, r=0.012)
+        civata_izgara(f"{name}_levhac{sy}", (x, sy * (yp + 0.008), zf - 0.06), (1, 0, 0), (0, 0, 1), 3, 1, 0.08, 0.0,
+                      "Y" if sy > 0 else "-Y", M, g, r=0.010)
+    # alt travers (iki levhayı flanşın altından bağlar) + askı kulağı
+    kutu(f"{name}_travers", (0.14, 2 * yp + 0.04, 0.05), (x, 0, z_alt - 0.055), M["antrasit"], g, bevel=0.006)
+    for sy in (-1, 1):
+        civata(f"{name}_traversc{sy}", (x, sy * (yp + 0.028), z_alt - 0.055), "Y" if sy > 0 else "-Y", M, g, r=0.013)
+    kutu(f"{name}_kulak", (0.06, 0.03, 0.09), (x, 0, z_alt - 0.12), M["antrasit"], g, bevel=0.004)
+    silindir(f"{name}_askipim", 0.016, 0.07, (x, 0, z_alt - 0.13), M["celik"], g, axis="Y")
+    # ön levhada "2 ton" kutusu, arka levhada yürütme motoru
+    kutu(f"{name}_kutu", (0.26, 0.10, 0.15), (x + 0.02, -(yp + 0.06), zf + 0.06), M["antrasit"], g, bevel=0.012)
+    yazi(f"{name}_kapasite", "2\nton", (x + 0.06, -(yp + 0.111), zf + 0.065), 0.045, M["beyaz"], g)
+    for k, dz in enumerate((0.03, -0.01)):
+        silindir(f"{name}_tapa{k}", 0.012, 0.01, (x - 0.06, -(yp + 0.112), zf + 0.06 + dz), M["siyah"], g, axis="Y")
+    kutu(f"{name}_red", (0.12, 0.10, 0.12), (x - 0.12, yp + 0.06, zf + 0.04), M["antrasit"], g, bevel=0.01)
+    silindir(f"{name}_motor", 0.05, 0.14, (x - 0.12, yp + 0.13, zf + 0.04), M["antrasit"], g, axis="Y", bevel=0.005)
+    return z_alt - 0.15
+
+
 def bom_logo(M, g, x, zb):
     """Bom gövdesine beyaz zemin üzerine 'beta' plakası."""
     kutu("bom_logozemin", (0.62, 0.004, 0.17), (x, -0.008, zb - 0.15), M["beyaz"], g, bevel=0.0015)
@@ -953,7 +993,7 @@ def sahne_duvar_pergel(M):
     beton = boya("beton_kolon", (0.36, 0.36, 0.345, 1), rough=0.85, var=0.1, bump=0.4)
     kutu("bina_kolon", (0.6, 0.6, 12.0), (-0.3, 0, 6.0), beton, bevel=0.01)
     # dönen grup (mafsal ekseni x=0.12)
-    SAPMA, YUKSEKLIK = 22, 0  # zincirli vinç fotoğrafının çekim açısı (soldan, yukarıdan; derece)
+    SAPMA, YUKSEKLIK = 10, 0  # zincirli vinç fotoğrafının çekim açısı (soldan, yukarıdan; derece)
     g = bos("pergel", (0.12, 0, 0), (0, 0, math.radians(SAPMA if YAN else 18)))
     # duvar konsolu (sabit)
     # üstten gergili: alt mafsal bom kökünde, üst mafsal bomun 1,3 m üstünde (alt flanş caraskal için serbest)
@@ -983,9 +1023,10 @@ def sahne_duvar_pergel(M):
     civata_izgara("bom_kok_c", (0.14, -0.132, zb - 0.16), (1, 0, 0), (0, 0, 1), 2, 3, 0.12, 0.11, "-Y", M, g, r=0.013)
     festoon("festoon", 0.3, 4.1, -0.27, zb + 0.07, 0.4, 3.25 - 0.42, M, g, n=5, L=1.1,
             y_konsol=-0.07, z_konsol=zb, aralik=1.2)
-    # caraskal bomun alt flanşında (ray) yürür: flanş arabanın içinden geçer, tekerlekler üstüne basar
-    foto_vinc("zincirli_vinc_2ton.png", g, (3.25, 0, zb - 0.282), 1.25, capa=0.62, dikey=0.165,
-              arkasinda=("festoon", "bom_alt"), eksen=(1, 0, 0),
+    # caraskal arabası 3B: tekerlekler bomun alt flanşında (ray); caraskal gövdesi ürün fotoğrafı, askıya asılı
+    z_askı = monoray_araba("araba", 3.25, zb - 0.30, 0.15, 0.022, M, g)
+    foto_vinc("zincirli_vinc_2ton.png", g, (3.25, 0, z_askı), 1.25, capa=0.60, dikey=0.0,
+              arkasinda=("festoon",), eksen=(1, 0, 0), kirp_ust=0.215,
               genislik_carpani=1 / math.cos(math.radians(SAPMA)))  # bomla aynı perspektif
     if not BEYAZ:
         palet(M, (4.6, 0.1, 0), 0.35)
