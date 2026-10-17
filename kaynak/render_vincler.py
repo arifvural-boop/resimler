@@ -563,6 +563,7 @@ def hol(M, arka_y=9.0, sol_x=-14.0, sag_x=18.0, yukseklik=12.0, kolon_aks=6.0):
 
 BEYAZ = os.environ.get("ORTAM", "beyaz") == "beyaz"
 FOTO_KLASOR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "vinc_foto")
+YAN = BEYAZ and os.environ.get("GORUNUS", "yan") == "yan"  # orijinal çizimler gibi tam yandan görünüş
 RAY = 6.0 if BEYAZ else 30.0
 FOTOLAR = []  # (dosya, nesne, yerel_nokta, yukseklik_m, yatay_capa)
 
@@ -776,7 +777,7 @@ def sahne_duvar_pergel(M):
     beton = boya("beton_kolon", (0.36, 0.36, 0.345, 1), rough=0.85, var=0.1, bump=0.4)
     kutu("bina_kolon", (0.6, 0.6, 12.0), (-0.3, 0, 6.0), beton, bevel=0.01)
     # dönen grup (mafsal ekseni x=0.12)
-    g = bos("pergel", (0.12, 0, 0), (0, 0, math.radians(18)))
+    g = bos("pergel", (0.12, 0, 0), (0, 0, 0 if YAN else math.radians(18)))
     # duvar konsolu (sabit)
     kutu("konsol_plaka", (0.03, 0.42, 2.0), (0.015, 0, 3.4), M["antrasit"], bevel=0.004)
     for z in (4.15, 2.75):
@@ -802,7 +803,10 @@ def sahne_duvar_pergel(M):
     foto_vinc("zincirli_vinc_2ton.png", g, (3.25, 0, zb - 0.285), 1.25, capa=0.62)
     if not BEYAZ:
         palet(M, (4.6, 0.1, 0), 0.35)
-    kamera((4.6, -5.6, 2.6), (2.1, 0.3, 3.05), lens=34, dof=9)
+    if YAN:
+        kamera((2.3, -10.0, 2.7), (2.3, 0, 2.7), lens=48)
+    else:
+        kamera((4.6, -5.6, 2.6), (2.1, 0.3, 3.05), lens=34, dof=9)
     anahtar_isik((4, -9, 8), (2, 0, 2), 1800, boyut=6)
 
 
@@ -826,7 +830,7 @@ def sahne_kolon_pergel(M):
     silindir("kolon", 0.17, H, (0, 0, H / 2 + 0.06), M["gri"], seg=64)
     silindir("kolon_bilezik", 0.20, 0.16, (0, 0, H + 0.06), M["antrasit"], seg=64, bevel=0.01)
     # dönen grup
-    g = bos("pergel", (0, 0, 0), (0, 0, math.radians(15)))
+    g = bos("pergel", (0, 0, 0), (0, 0, 0 if YAN else math.radians(15)))
     zb = H + 0.48
     silindir("baslik", 0.215, 0.36, (0, 0, H + 0.30), M["antrasit"], g, seg=64, bevel=0.01)
     silindir("baslik_serit", 0.217, 0.05, (0, 0, H + 0.42), M["turuncu"], g, seg=64)
@@ -842,8 +846,46 @@ def sahne_kolon_pergel(M):
     foto_vinc("kompakt_vinc.png", g, (3.45, 0, zb - 0.285), 1.10, capa=0.66)
     if not BEYAZ:
         palet(M, (4.4, -0.6, 0), 0.3)
-    kamera((4.4, -6.6, 2.4), (2.0, 0.3, 2.65), lens=32, dof=9)
+    if YAN:
+        kamera((2.2, -10.0, 2.55), (2.2, 0, 2.55), lens=42)
+    else:
+        kamera((4.4, -6.6, 2.4), (2.0, 0.3, 2.65), lens=32, dof=9)
     anahtar_isik((3, -9, 8), (1.5, 0, 2), 1800, boyut=6)
+
+
+def portal_ayak_x(name, xc, z_alt, z_ust, M, g, derinlik):
+    """Orijinal çizimdeki gibi açıklık düzleminde A tipi ayak (iki konik kol + ara bağ)."""
+    alt, ust = 0.75, 0.18
+    for sx in (-1, 1):
+        uye(f"{name}_kol{sx}", (xc + sx * alt, 0, z_alt), (xc + sx * ust, 0, z_ust), derinlik, derinlik,
+            0.30, 0.40, M["turuncu"], g, up=Vector((0, 1, 0)), bevel=0.01)
+        kutu(f"{name}_flans{sx}", (0.46, derinlik + 0.04, 0.03), (xc + sx * alt, 0, z_alt + 0.015), M["turuncu"], g, bevel=0.004)
+    t = 0.42
+    zc = z_alt + (z_ust - z_alt) * t
+    yar = alt - (alt - ust) * t
+    kutu(f"{name}_bag", (2 * yar, derinlik * 0.9, 0.16), (xc, 0, zc), M["turuncu"], g, bevel=0.008)
+
+
+def bas_araba_x(name, xc, z, M, g, derinlik):
+    """X doğrultusunda yürüyen baş arabası; tekerlekler yandan görünür."""
+    L = 2.3
+    kutu(name, (L, derinlik, 0.36), (xc, 0, z + 0.33), M["antrasit"], g, bevel=0.012)
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            yy = sy * (derinlik / 2 + 0.05)
+            silindir(f"{name}_tek{sx}{sy}", 0.17, 0.10, (xc + sx * 0.8, yy, z + 0.20), M["antrasit"], g, axis="Y", bevel=0.006)
+            silindir(f"{name}_gobek{sx}{sy}", 0.06, 0.13, (xc + sx * 0.8, yy + sy * 0.02, z + 0.20), M["celik"], g, axis="Y")
+        kutu(f"{name}_tampon{sx}", (0.10, 0.14, 0.12), (xc + sx * (L / 2 + 0.05), 0, z + 0.33), M["siyah"], g, bevel=0.02)
+    kutu(f"{name}_red", (0.30, 0.22, 0.28), (xc + 0.35, -derinlik / 2 - 0.13, z + 0.42), M["turuncu"], g, bevel=0.02)
+    silindir(f"{name}_motor", 0.10, 0.34, (xc + 0.75, -derinlik / 2 - 0.13, z + 0.42), M["antrasit"], g, axis="X", bevel=0.01)
+
+
+def ray_x(name, x0, x1, y, M):
+    L = x1 - x0
+    cx = (x0 + x1) / 2
+    kutu(name + "_taban", (L, 0.16, 0.02), (cx, y, 0.01), M["ray"], bevel=0.003)
+    kutu(name + "_govde", (L, 0.03, 0.07), (cx, y, 0.055), M["ray"], bevel=0.002)
+    kutu(name + "_mantar", (L, 0.07, 0.035), (cx, y, 0.105), M["ray"], bevel=0.006)
 
 
 def portal_govde(M, g, span, z_ust, h, cift_ayak=True, ray_ust=0.0, kanca_z=1.6, foto=None):
@@ -852,18 +894,27 @@ def portal_govde(M, g, span, z_ust, h, cift_ayak=True, ray_ust=0.0, kanca_z=1.6,
     kutu_kiris("kiris_arka", 0, span, yk, z_ust, h, 0.42, M, g)
     for x in ((0.0, span) if True else ()):
         kutu(f"bas_kirisi{x}", (0.5, 2 * yk + 0.6, h * 0.8), (x, 0, z_ust - h * 0.45), M["turuncu"], g, bevel=0.012)
-    # yürüyüş yolu ve korkuluk (arka kiriş üstünde)
-    for i in range(int(span / 1.0) + 1):
+    # yürüyüş yolu ve korkuluk (arka kiriş üstünde; yan görünümde arabayı kapatmasın)
+    for i in range(0 if YAN else int(span / 1.0) + 1):
         kutu(f"korkuluk_dikme{i}", (0.04, 0.04, 1.0), (i * span / int(span), yk + 0.48, z_ust + 0.5), M["sari"], g, bevel=0.004)
-    kutu("korkuluk_ust", (span, 0.04, 0.04), (span / 2, yk + 0.48, z_ust + 1.0), M["sari"], g, bevel=0.004)
-    kutu("korkuluk_orta", (span, 0.03, 0.03), (span / 2, yk + 0.48, z_ust + 0.5), M["sari"], g, bevel=0.004)
+    if not YAN:
+        kutu("korkuluk_ust", (span, 0.04, 0.04), (span / 2, yk + 0.48, z_ust + 1.0), M["sari"], g, bevel=0.004)
+        kutu("korkuluk_orta", (span, 0.03, 0.03), (span / 2, yk + 0.48, z_ust + 0.5), M["sari"], g, bevel=0.004)
     kutu("yurume_yolu", (span, 0.55, 0.02), (span / 2, yk + 0.24 + 0.05, z_ust - 0.01), M["antrasit"], g, bevel=0.002)
     # ayaklar
     zl = z_ust - h
+    if YAN:
+        der = 2 * yk + 0.42
+        for i, xa in enumerate((1.6, span - 1.6) if cift_ayak else (1.6,)):
+            portal_ayak_x(f"ayak{i}", xa, 0.62, zl, M, g, der)
+            bas_araba_x(f"bas{i}", xa, ray_ust, M, g, der)
+            for sy in (-1, 1):
+                ray_x(f"ray{i}{sy}", xa - 2.2, xa + 2.2, sy * (der / 2 + 0.05), M)
     ya = max(1.7, yk + 0.9)
-    portal_ayak("ayak_sol", 0.0, ya, max(0.55, yk * 0.9), 0.62, zl, M, g)
-    bas_araba("bas_sol", 0.0, -ya - 0.5, ya + 0.5, M, g, z=ray_ust)
-    if cift_ayak:
+    if not YAN:
+        portal_ayak("ayak_sol", 0.0, ya, max(0.55, yk * 0.9), 0.62, zl, M, g)
+        bas_araba("bas_sol", 0.0, -ya - 0.5, ya + 0.5, M, g, z=ray_ust)
+    if cift_ayak and not YAN:
         portal_ayak("ayak_sag", span, ya, max(0.55, yk * 0.9), 0.62, zl, M, g)
         bas_araba("bas_sag", span, -ya - 0.5, ya + 0.5, M, g, z=ray_ust)
         kutu("kumanda_kabin", (0.6, 0.5, 0.9), (span - 0.0, -ya * 0.6, 1.6), M["antrasit"], g, bevel=0.01)
@@ -871,7 +922,7 @@ def portal_govde(M, g, span, z_ust, h, cift_ayak=True, ray_ust=0.0, kanca_z=1.6,
         # Beta halatlı vinç arabası fotoğrafı: kiriş raylarının üstünde, halatlar ön kirişin arkasında
         dosya, yuk, capa, dikey = foto
         foto_vinc(dosya, g, (span * 0.47, 0, z_ust + 0.05), yuk, capa=capa, dikey=dikey,
-                  arkasinda=("kiris_on",), halat=(0.45, 0.60, 2.1), eksen=(1, 0, 0))
+                  arkasinda=("kiris_on",), halat=(0.45, 0.60, kanca_z), eksen=(1, 0, 0))
     else:
         halatli_araba("araba", span * 0.47, z_ust + 0.05, yk, M, g, kanca_z=kanca_z)
 
@@ -889,15 +940,19 @@ def ray(name, x, y0, y1, M):
 def sahne_portal(M):
     ortam(M, arka_y=9.5, sol_x=-9.0, sag_x=22.0)
     span = 11.0
-    ray("ray_sol", 0.0, -RAY, RAY, M)
-    ray("ray_sag", span, -RAY, RAY, M)
+    if not YAN:
+        ray("ray_sol", 0.0, -RAY, RAY, M)
+        ray("ray_sag", span, -RAY, RAY, M)
     g = bos("portal", (0, 0, 0.12))
-    portal_govde(M, g, span, 6.6, 0.85, cift_ayak=True, kanca_z=1.4,
+    portal_govde(M, g, span, 6.6, 0.85, cift_ayak=True, kanca_z=3.0 if YAN else 1.4,
                  foto=("halatli_vinc_araba.png", 2.3, 0.5, 0.41) if BEYAZ else None)
     # yük: çelik sac paketi
     if not BEYAZ:
         yuk_kasa(M, (span * 0.47 - 0.15, -0.0, 0.0))
-    kamera((13.4, -11.0, 1.8), (5.4, 0.0, 3.7), lens=24, dof=12)
+    if YAN:
+        kamera((span / 2, -19.5, 4.1), (span / 2, 0, 4.1), lens=42)
+    else:
+        kamera((13.4, -11.0, 1.8), (5.4, 0.0, 3.7), lens=24, dof=12)
     anahtar_isik((4, -12, 10), (5, 0, 3), 3500, boyut=8)
 
 
@@ -907,7 +962,7 @@ def sahne_yari_portal(M):
     # sağda betonarme bina kolonları + yürüyüş yolu kirişi
     beton = boya("beton_kolon", (0.36, 0.36, 0.345, 1), rough=0.85, var=0.1, bump=0.4)
     kx = span + 0.75
-    for i, y in enumerate((-3.5, 3.5) if BEYAZ else (-12, -6, 0, 6, 12)):
+    for i, y in enumerate(((0,) if YAN else (-3.5, 3.5)) if BEYAZ else (-12, -6, 0, 6, 12)):
         kutu(f"bina_kolon{i}", (0.6, 0.6, 12), (kx, y, 6), beton, bevel=0.01)
         kutu(f"konsol{i}", (0.6, 0.6, 0.6), (kx - 0.55, y, 6.0), beton, bevel=0.01)
     if not BEYAZ:
@@ -919,17 +974,21 @@ def sahne_yari_portal(M):
     yk.rotation_euler = (0, 0, math.pi / 2)
     yk.location = (span, 0, 0)
     kutu("yol_rayi", (0.06, 7.6 if BEYAZ else 42.3, 0.05), (span, 0 if BEYAZ else 8.85, 6.775), M["ray"], bevel=0.004)
-    ray("ray_sol", 0.0, -RAY, RAY, M)
+    if not YAN:
+        ray("ray_sol", 0.0, -RAY, RAY, M)
     g = bos("portal", (0, 0, 0.12))
     zust = 7.75
-    portal_govde(M, g, span, zust, 0.85, cift_ayak=False, kanca_z=1.4,
+    portal_govde(M, g, span, zust, 0.85, cift_ayak=False, kanca_z=3.4 if YAN else 1.4,
                  foto=("halatli_vinc_araba.png", 2.3, 0.5, 0.41) if BEYAZ else None)
     # yol kirişi üzerindeki baş arabası
     bas_araba("bas_sag", span, -1.6, 1.6, M, g, z=6.68)
     kutu("sag_bas_baglanti", (0.5, 1.6, 0.25), (span, 0, zust - 0.85 - 0.12 + 0.0), M["turuncu"], g, bevel=0.01)
     if not BEYAZ:
         yuk_kasa(M, (span * 0.47 - 0.15, 0.0, 0.0))
-    kamera((-2.2, -11.6, 1.8), (6.0, 0.4, 4.3), lens=24, dof=12)
+    if YAN:
+        kamera((6.2, -20.5, 4.6), (6.2, 0, 4.6), lens=42)
+    else:
+        kamera((-2.2, -11.6, 1.8), (6.0, 0.4, 4.3), lens=24, dof=12)
     anahtar_isik((8, -12, 10), (6, 0, 3), 3500, boyut=8)
 
 

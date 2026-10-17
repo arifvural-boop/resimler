@@ -1,7 +1,8 @@
 # Beta Vinç – Gerçekçi Vinç Görselleri
 
 betavinc.com'daki düz (flat) vektör portal ve pergel vinç çizimleri, Blender Cycles
-ile fotoğraf gerçekliğinde, gölgesiz düz beyaz arka plan üzerinde render edildi. Marka renkleri ve "beta" logosu korundu.
+ile fotoğraf gerçekliğinde, gölgesiz düz beyaz arka plan üzerinde ve orijinal çizimlerdeki
+gibi tam yandan görünüşle render edildi (eski 3/4 açı için: GORUNUS=capraz). Marka renkleri ve "beta" logosu korundu.
 
 Vinçler modellenmedi; Beta'nın gerçek ürün fotoğrafları (`kaynak/vinc_foto/`,
 beyaz zemini temizlenmiş) sahnedeki gerçek ölçülü bir düzleme oturtulup, köşeleri kameraya
