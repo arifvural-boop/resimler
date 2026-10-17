@@ -4,7 +4,8 @@ betavinc.com'daki düz (flat) vektör portal ve pergel vinç çizimleri, Blender
 ile fotoğraf gerçekliğinde, gölgesiz düz beyaz arka plan üzerinde render edildi. Marka renkleri ve "beta" logosu korundu.
 
 Vinçler modellenmedi; Beta'nın gerçek ürün fotoğrafları (`kaynak/vinc_foto/`,
-beyaz zemini temizlenmiş) bom / kiriş alt başlığına perspektife uygun konumda eklendi:
+beyaz zemini temizlenmiş) sahnedeki gerçek ölçülü bir düzleme oturtulup, köşeleri kameraya
+izdüşürülerek homografi ile perspektifli bükülüp eklendi (bom / kirişle aynı kaçış):
 
 - Duvar tipi pergel → 2 ton zincirli vinç (`zincirli_vinc_2ton.png`)
 - Kolon tipi pergel → kompakt vinç (`kompakt_vinc.png`)

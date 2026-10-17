@@ -574,16 +574,31 @@ def ortam(M, **kw):
     return None  # zemin yok: düz beyaz arka plan, gölge yok
 
 
-def foto_vinc(dosya, nesne, nokta, yukseklik, capa=0.5, dikey=0.0, arkasinda=(), halat=None):
-    """Gerçek ürün fotoğrafını render sonrası ekle.
+def foto_vinc(dosya, nesne, nokta, yukseklik, capa=0.5, dikey=0.0, arkasinda=(), halat=None,
+              eksen=(1, 0, 0)):
+    """Gerçek ürün fotoğrafını sahnedeki bir düzleme perspektifli olarak yerleştir.
 
-    nokta: fotoğrafın `dikey` oranındaki yüksekliğe denk gelen 3B nokta (0 = üst kenar),
+    Fotoğraf, `nesne` yerel koordinatlarında `eksen` (yatay) ve Z (düşey) doğrultularının
+    oluşturduğu düzleme gerçek ölçüsünde (yükseklik m) oturtulur; dört köşesi kameraya
+    izdüşürülüp homografi ile bükülür.
+    nokta: fotoğrafın yatayda `capa`, düşeyde `dikey` oranına (0 = üst kenar) denk gelen nokta,
     arkasinda: fotoğrafın önünde kalacak nesnelerin ad önekleri (ör. ön kiriş),
-    halat: (ust_oran, alt_oran, kanca_z) - fotoğraftaki yalnız halat bandını dikey uzatıp
-           kancayı kanca_z yüksekliğine indirir.
+    halat: (ust_oran, alt_oran, kanca_z) - yalnız halat bandını uzatıp kancayı kanca_z'ye indirir.
     """
     FOTOLAR.append((os.path.join(FOTO_KLASOR, dosya), nesne, Vector(nokta), yukseklik, capa, dikey,
-                    tuple(arkasinda), halat))
+                    tuple(arkasinda), halat, Vector(eksen).normalized()))
+
+
+def _homografi(hedef, kaynak):
+    """PIL PERSPECTIVE katsayıları: çıktı (hedef) noktası -> girdi (kaynak) noktası."""
+    import numpy as np
+
+    A, B = [], []
+    for (x, y), (u, v) in zip(hedef, kaynak):
+        A.append([x, y, 1, 0, 0, 0, -u * x, -u * y])
+        A.append([0, 0, 0, x, y, 1, -v * x, -v * y])
+        B += [u, v]
+    return np.linalg.solve(np.array(A, float), np.array(B, float)).tolist()
 
 
 def maske_render(onekler, yol):
@@ -618,31 +633,43 @@ def fotolari_ekle(cikti):
         zemin = Image.new("RGBA", img.size, (255, 255, 255, 255))
         img = Image.alpha_composite(zemin, img)
     taban = img.copy()
+
+    def ekran(p):
+        q = world_to_camera_view(sc, sc.camera, p)
+        return (q.x * W, (1 - q.y) * H)
+
     yerlesim = []
-    for dosya, nesne, nokta, yuk, capa, dikey, arkasinda, halat in FOTOLAR:
-        ust = nesne.matrix_world @ nokta
-        alt = nesne.matrix_world @ (nokta - Vector((0, 0, yuk)))
-        pu = world_to_camera_view(sc, sc.camera, ust)
-        pa = world_to_camera_view(sc, sc.camera, alt)
-        hpx = (pu.y - pa.y) * H
+    for dosya, nesne, nokta, yuk, capa, dikey, arkasinda, halat, eksen in FOTOLAR:
         foto = Image.open(dosya).convert("RGBA")
-        olcek = hpx / foto.height
-        foto = foto.resize((max(1, round(foto.width * olcek)), max(1, round(foto.height * olcek))), Image.LANCZOS)
-        x = round(pu.x * W - foto.width * capa)
-        y = round((1 - pu.y) * H - foto.height * dikey)
+        fw, fh = foto.size
+        gen = yuk * fw / fh
         if halat:
             r1, r2, kanca_z = halat
-            fw, fh = foto.size
             a, b = round(r1 * fh), round(r2 * fh)
-            kanca_alt = ust.z - (1 - dikey) * yuk
-            ek = max(0.0, kanca_alt - kanca_z) * hpx / yuk
-            orta = foto.crop((0, a, fw, b)).resize((fw, round(b - a + ek)), Image.BICUBIC)
+            kanca_alt = (nesne.matrix_world @ nokta).z - (1 - dikey) * yuk
+            ek_m = max(0.0, kanca_alt - kanca_z)
+            orta = foto.crop((0, a, fw, b)).resize((fw, round(b - a + ek_m * fh / yuk)), Image.BICUBIC)
             yeni = Image.new("RGBA", (fw, a + orta.height + fh - b), (0, 0, 0, 0))
             yeni.paste(foto.crop((0, 0, fw, a)), (0, 0))
             yeni.paste(orta, (0, a))
             yeni.paste(foto.crop((0, b, fw, fh)), (0, a + orta.height))
-            foto = yeni
-        yerlesim.append((foto, x, y, arkasinda))
+            ust_m = dikey * yuk
+            foto, fh = yeni, yeni.height
+            yuk = yuk + ek_m
+            dikey = ust_m / yuk
+        mw = nesne.matrix_world
+        z = Vector((0, 0, 1))
+
+        def kose(fx, fy, u=eksen):
+            return ekran(mw @ (nokta + u * ((fx - capa) * gen) + z * ((dikey - fy) * yuk)))
+
+        # fotoğraf ayna görüntüsü olmasın: sol kenar ekranda solda kalsın
+        if kose(0, dikey)[0] > kose(1, dikey)[0]:
+            eksen = -eksen
+        hedef = [kose(0, 0, eksen), kose(1, 0, eksen), kose(1, 1, eksen), kose(0, 1, eksen)]
+        katsayi = _homografi(hedef, [(0, 0), (fw, 0), (fw, fh), (0, fh)])
+        bukulmus = foto.transform((W, H), Image.PERSPECTIVE, katsayi, Image.BICUBIC)
+        yerlesim.append((bukulmus, 0, 0, arkasinda))
     for foto, x, y, _ in yerlesim:
         img.alpha_composite(foto, (x, y))
     onekler = tuple(sorted({o for *_, a in yerlesim for o in a}))
@@ -833,17 +860,18 @@ def portal_govde(M, g, span, z_ust, h, cift_ayak=True, ray_ust=0.0, kanca_z=1.6,
     kutu("yurume_yolu", (span, 0.55, 0.02), (span / 2, yk + 0.24 + 0.05, z_ust - 0.01), M["antrasit"], g, bevel=0.002)
     # ayaklar
     zl = z_ust - h
-    portal_ayak("ayak_sol", 0.0, 1.7, 0.55, 0.62, zl, M, g)
-    bas_araba("bas_sol", 0.0, -2.2, 2.2, M, g, z=ray_ust)
+    ya = max(1.7, yk + 0.9)
+    portal_ayak("ayak_sol", 0.0, ya, max(0.55, yk * 0.9), 0.62, zl, M, g)
+    bas_araba("bas_sol", 0.0, -ya - 0.5, ya + 0.5, M, g, z=ray_ust)
     if cift_ayak:
-        portal_ayak("ayak_sag", span, 1.7, 0.55, 0.62, zl, M, g)
-        bas_araba("bas_sag", span, -2.2, 2.2, M, g, z=ray_ust)
-        kutu("kumanda_kabin", (0.6, 0.5, 0.9), (span - 0.0, -1.0, 1.6), M["antrasit"], g, bevel=0.01)
+        portal_ayak("ayak_sag", span, ya, max(0.55, yk * 0.9), 0.62, zl, M, g)
+        bas_araba("bas_sag", span, -ya - 0.5, ya + 0.5, M, g, z=ray_ust)
+        kutu("kumanda_kabin", (0.6, 0.5, 0.9), (span - 0.0, -ya * 0.6, 1.6), M["antrasit"], g, bevel=0.01)
     if foto:
         # Beta halatlı vinç arabası fotoğrafı: kiriş raylarının üstünde, halatlar ön kirişin arkasında
         dosya, yuk, capa, dikey = foto
         foto_vinc(dosya, g, (span * 0.47, 0, z_ust + 0.05), yuk, capa=capa, dikey=dikey,
-                  arkasinda=("kiris_on",), halat=(0.45, 0.60, 2.1))
+                  arkasinda=("kiris_on",), halat=(0.45, 0.60, 2.1), eksen=(1, 0, 0))
     else:
         halatli_araba("araba", span * 0.47, z_ust + 0.05, yk, M, g, kanca_z=kanca_z)
 
