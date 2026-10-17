@@ -956,11 +956,12 @@ def sahne_duvar_pergel(M):
     SAPMA, YUKSEKLIK = 22, 0  # zincirli vinç fotoğrafının çekim açısı (soldan, yukarıdan; derece)
     g = bos("pergel", (0.12, 0, 0), (0, 0, math.radians(SAPMA if YAN else 18)))
     # duvar konsolu (sabit)
-    kutu("konsol_plaka", (0.03, 0.42, 2.0), (0.015, 0, 3.4), M["antrasit"], bevel=0.004)
-    for z in (4.15, 2.75):
+    # üstten gergili: alt mafsal bom kökünde, üst mafsal bomun 1,3 m üstünde (alt flanş caraskal için serbest)
+    kutu("konsol_plaka", (0.03, 0.42, 2.0), (0.015, 0, 4.75), M["antrasit"], bevel=0.004)
+    for z in (4.0, 5.55):
         kutu(f"konsol_kulak{z}", (0.22, 0.30, 0.14), (0.12, 0, z), M["antrasit"], bevel=0.01)
         silindir(f"pim{z}", 0.04, 0.36, (0.16, 0, z), M["celik"])
-    for zz in (2.55, 3.0, 3.8, 4.25):
+    for zz in (3.9, 4.35, 5.15, 5.6):
         for yy in (-0.15, 0.15):
             silindir(f"civata{zz}{yy}", 0.018, 0.04, (0.04, yy, zz), M["celik"], axis="X", seg=6)
     # bom (IPE 300)
@@ -971,12 +972,14 @@ def sahne_duvar_pergel(M):
     bom_logo(M, g, 1.25, zb)
     for sy in (-1, 1):
         kutu(f"stoper{sy}", (0.05, 0.03, 0.06), (4.12, sy * 0.06, zb - 0.33), M["siyah"], g, bevel=0.01)
-    # gergi
-    p1 = (0.18, 0, 2.75)
-    p2 = (2.3, 0, zb - 0.30)
-    boru("gergi", p1, p2, 0.048, M["turuncu"], g)
-    kutu("gergi_ust_kulak", (0.16, 0.10, 0.08), (2.3, 0, zb - 0.34), M["antrasit"], g, bevel=0.008)
-    silindir("gergi_ust_pim", 0.025, 0.14, (2.3, 0, zb - 0.36), M["celik"], g, axis="Y")
+    # gergi: üst mafsaldan bomun üst flanşındaki kulağa
+    xg = 3.45
+    boru("gergi", (0.18, 0, 5.55), (xg, 0, zb + 0.10), 0.042, M["turuncu"], g)
+    kutu("gergi_bom_kulak", (0.18, 0.03, 0.14), (xg, 0, zb + 0.07), M["antrasit"], g, bevel=0.006)
+    silindir("gergi_bom_pim", 0.022, 0.12, (xg, 0, zb + 0.10), M["celik"], g, axis="Y")
+    kutu("gergi_catal", (0.14, 0.09, 0.07), (xg - 0.08, 0, zb + 0.14), M["antrasit"], g, bevel=0.01, rot=(0, math.radians(20), 0))
+    kutu("gergi_gerdirme", (0.22, 0.09, 0.09), (1.6, 0, 5.55 - (5.55 - zb - 0.1) * (1.42 / 3.27)), M["antrasit"], g, bevel=0.01,
+         rot=(0, math.atan2(5.55 - zb - 0.1, 3.27), 0))
     civata_izgara("bom_kok_c", (0.14, -0.132, zb - 0.16), (1, 0, 0), (0, 0, 1), 2, 3, 0.12, 0.11, "-Y", M, g, r=0.013)
     festoon("festoon", 0.3, 4.1, -0.27, zb + 0.07, 0.4, 3.25 - 0.42, M, g, n=5, L=1.1,
             y_konsol=-0.07, z_konsol=zb, aralik=1.2)
@@ -987,7 +990,7 @@ def sahne_duvar_pergel(M):
     if not BEYAZ:
         palet(M, (4.6, 0.1, 0), 0.35)
     if YAN:
-        foto_kamera(g, (3.25, 0, zb - 0.15), SAPMA, YUKSEKLIK, 11.5, (2.0, 0.6, 2.7), lens=44)
+        foto_kamera(g, (3.25, 0, zb - 0.15), SAPMA, YUKSEKLIK, 12.5, (2.0, 0.6, 3.3), lens=42)
     else:
         kamera((4.6, -5.6, 2.6), (2.1, 0.3, 3.05), lens=34, dof=9)
     anahtar_isik((4, -9, 8), (2, 0, 2), 1800, boyut=6)
@@ -1023,10 +1026,21 @@ def sahne_kolon_pergel(M):
     kutu("bom_kok", (0.22, 0.26, 0.40), (0.22, 0, zb - 0.18), M["turuncu"], g, bevel=0.02)
     kutu("bom_uc", (0.02, 0.22, 0.34), (4.41, 0, zb - 0.15), M["antrasit"], g, bevel=0.004)
     bom_logo(M, g, 1.3, zb)
-    # gergi (kolon bileziğinden)
-    silindir("alt_bilezik", 0.205, 0.14, (0, 0, H - 0.75), M["antrasit"], g, seg=64, bevel=0.01)
-    boru("gergi", (0.2, 0, H - 0.75), (2.3, 0, zb - 0.30), 0.048, M["turuncu"], g)
-    kutu("gergi_ust_kulak", (0.16, 0.10, 0.08), (2.3, 0, zb - 0.34), M["antrasit"], g, bevel=0.008)
+    # üstten gergi: dönen başlık üstünde direk, tepesinden bomun üst flanşına (alt flanş serbest)
+    zd = zb + 1.35
+    silindir("direk", 0.11, zd - (H + 0.52), (0, 0, (zd + H + 0.52) / 2), M["gri"], g, seg=48)
+    silindir("direk_kapak", 0.14, 0.05, (0, 0, zd + 0.025), M["antrasit"], g, seg=48, bevel=0.006)
+    kutu("direk_kulak", (0.20, 0.03, 0.16), (0.14, 0, zd - 0.06), M["antrasit"], g, bevel=0.006)
+    silindir("direk_pim", 0.022, 0.12, (0.2, 0, zd - 0.06), M["celik"], g, axis="Y")
+    xg = 3.45
+    boru("gergi", (0.2, 0, zd - 0.06), (xg, 0, zb + 0.10), 0.042, M["turuncu"], g)
+    kutu("gergi_bom_kulak", (0.18, 0.03, 0.14), (xg, 0, zb + 0.07), M["antrasit"], g, bevel=0.006)
+    silindir("gergi_bom_pim", 0.022, 0.12, (xg, 0, zb + 0.10), M["celik"], g, axis="Y")
+    kutu("gergi_gerdirme", (0.22, 0.09, 0.09), (1.7, 0, zd - 0.06 - (zd - 0.16 - zb) * (1.5 / 3.25)), M["antrasit"], g, bevel=0.01,
+         rot=(0, math.atan2(zd - 0.16 - zb, 3.25), 0))
+    for i in range(6):  # direk - başlık flanşı
+        a_ = i * math.pi / 3
+        civata(f"direk_c{i}", (0.17 * math.cos(a_), 0.17 * math.sin(a_), H + 0.52), "Z", M, g, r=0.011)
     civata_izgara("bom_kok_c", (0.22, -0.132, zb - 0.18), (1, 0, 0), (0, 0, 1), 2, 3, 0.11, 0.11, "-Y", M, g, r=0.013)
     for i in range(10):
         a_ = i * 2 * math.pi / 10
@@ -1039,7 +1053,7 @@ def sahne_kolon_pergel(M):
     if not BEYAZ:
         palet(M, (4.4, -0.6, 0), 0.3)
     if YAN:
-        foto_kamera(g, (3.45, 0, zb - 0.15), SAPMA, YUKSEKLIK, 11.5, (1.5, 0.9, 2.45), lens=40)
+        foto_kamera(g, (3.45, 0, zb - 0.15), SAPMA, YUKSEKLIK, 12.5, (1.5, 0.9, 3.0), lens=38)
     else:
         kamera((4.4, -6.6, 2.4), (2.0, 0.3, 2.65), lens=32, dof=9)
     anahtar_isik((3, -9, 8), (1.5, 0, 2), 1800, boyut=6)
