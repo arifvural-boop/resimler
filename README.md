@@ -1,15 +1,15 @@
 # Beta Vinç – Gerçekçi Vinç Görselleri
 
 betavinc.com'daki düz (flat) vektör portal ve pergel vinç çizimleri, Blender Cycles
-ile fotoğraf gerçekliğinde, beyaz zemin üzerinde (yumuşak gölgeli katalog görünümü)
-render edildi. Marka renkleri ve "beta" logosu korundu.
+ile fotoğraf gerçekliğinde, gölgesiz düz beyaz arka plan üzerinde render edildi. Marka renkleri ve "beta" logosu korundu.
 
-Pergel vinçlerde vinç modellenmedi; Beta'nın gerçek ürün fotoğrafları
-(`kaynak/vinc_foto/`, beyaz zemini temizlenmiş) bom alt başlığına doğru ölçek ve
-perspektif konumunda eklendi:
+Vinçler modellenmedi; Beta'nın gerçek ürün fotoğrafları (`kaynak/vinc_foto/`,
+beyaz zemini temizlenmiş) bom / kiriş alt başlığına perspektife uygun konumda eklendi:
 
 - Duvar tipi pergel → 2 ton zincirli vinç (`zincirli_vinc_2ton.png`)
 - Kolon tipi pergel → kompakt vinç (`kompakt_vinc.png`)
+- Yarı portal → 2 ton zincirli vinç
+- Portal → kompakt vinç
 
 | Ürün | Orijinal | Gerçekçi |
 |---|---|---|

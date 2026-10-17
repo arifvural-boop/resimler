@@ -568,12 +568,10 @@ FOTOLAR = []  # (dosya, nesne, yerel_nokta, yukseklik_m, yatay_capa)
 
 
 def ortam(M, **kw):
-    """Beyaz stüdyo (gölge yakalayıcı zemin) veya fabrika holü."""
+    """Gölgesiz düz beyaz arka plan veya fabrika holü."""
     if not BEYAZ:
         return hol(M, **kw)
-    z = duzlem("zemin", (120, 120), (0, 0, 0), (0, 0, 0), boya("zemin_beyaz", (0.9, 0.9, 0.9, 1), rough=0.6, var=0))
-    z.is_shadow_catcher = True
-    return z
+    return None  # zemin yok: düz beyaz arka plan, gölge yok
 
 
 def foto_vinc(dosya, nesne, nokta, yukseklik, capa=0.5):
@@ -723,7 +721,7 @@ def sahne_duvar_pergel(M):
     boru("gergi", p1, p2, 0.048, M["turuncu"], g)
     kutu("gergi_ust_kulak", (0.16, 0.10, 0.08), (2.3, 0, zb - 0.34), M["antrasit"], g, bevel=0.008)
     silindir("gergi_ust_pim", 0.025, 0.14, (2.3, 0, zb - 0.36), M["celik"], g, axis="Y")
-    foto_vinc("zincirli_vinc_2ton.png", g, (3.25, 0, zb - 0.285), 1.05, capa=0.62)
+    foto_vinc("zincirli_vinc_2ton.png", g, (3.25, 0, zb - 0.285), 1.25, capa=0.62)
     if not BEYAZ:
         palet(M, (4.6, 0.1, 0), 0.35)
     kamera((4.6, -5.6, 2.6), (2.1, 0.3, 3.05), lens=34, dof=9)
@@ -763,14 +761,14 @@ def sahne_kolon_pergel(M):
     silindir("alt_bilezik", 0.205, 0.14, (0, 0, H - 0.75), M["antrasit"], g, seg=64, bevel=0.01)
     boru("gergi", (0.2, 0, H - 0.75), (2.3, 0, zb - 0.30), 0.048, M["turuncu"], g)
     kutu("gergi_ust_kulak", (0.16, 0.10, 0.08), (2.3, 0, zb - 0.34), M["antrasit"], g, bevel=0.008)
-    foto_vinc("kompakt_vinc.png", g, (3.45, 0, zb - 0.285), 0.95, capa=0.66)
+    foto_vinc("kompakt_vinc.png", g, (3.45, 0, zb - 0.285), 1.10, capa=0.66)
     if not BEYAZ:
         palet(M, (4.4, -0.6, 0), 0.3)
     kamera((4.4, -6.6, 2.4), (2.0, 0.3, 2.65), lens=32, dof=9)
     anahtar_isik((3, -9, 8), (1.5, 0, 2), 1800, boyut=6)
 
 
-def portal_govde(M, g, span, z_ust, h, cift_ayak=True, ray_ust=0.0, kanca_z=1.6):
+def portal_govde(M, g, span, z_ust, h, cift_ayak=True, ray_ust=0.0, kanca_z=1.6, foto=None):
     yk = 0.48  # kiriş aksları
     kutu_kiris("kiris_on", 0, span, -yk, z_ust, h, 0.42, M, g, logo_yuzu=True)
     kutu_kiris("kiris_arka", 0, span, yk, z_ust, h, 0.42, M, g)
@@ -790,7 +788,12 @@ def portal_govde(M, g, span, z_ust, h, cift_ayak=True, ray_ust=0.0, kanca_z=1.6)
         portal_ayak("ayak_sag", span, 1.7, 0.55, 0.62, zl, M, g)
         bas_araba("bas_sag", span, -2.2, 2.2, M, g, z=ray_ust)
         kutu("kumanda_kabin", (0.6, 0.5, 0.9), (span - 0.0, -1.0, 1.6), M["antrasit"], g, bevel=0.01)
-    halatli_araba("araba", span * 0.47, z_ust + 0.05, yk, M, g, kanca_z=kanca_z)
+    if foto:
+        # Beta ürün fotoğrafı: ön kirişin alt başlığında yürüyen vinç
+        dosya, yuk, capa = foto
+        foto_vinc(dosya, g, (span * 0.47, -yk, z_ust - h + 0.02), yuk, capa=capa)
+    else:
+        halatli_araba("araba", span * 0.47, z_ust + 0.05, yk, M, g, kanca_z=kanca_z)
 
 
 def ray(name, x, y0, y1, M):
@@ -809,7 +812,8 @@ def sahne_portal(M):
     ray("ray_sol", 0.0, -RAY, RAY, M)
     ray("ray_sag", span, -RAY, RAY, M)
     g = bos("portal", (0, 0, 0.12))
-    portal_govde(M, g, span, 6.6, 0.85, cift_ayak=True, kanca_z=1.4)
+    portal_govde(M, g, span, 6.6, 0.85, cift_ayak=True, kanca_z=1.4,
+                 foto=("kompakt_vinc.png", 1.6, 0.66) if BEYAZ else None)
     # yük: çelik sac paketi
     if not BEYAZ:
         yuk_kasa(M, (span * 0.47 - 0.15, -0.0, 0.0))
@@ -838,7 +842,8 @@ def sahne_yari_portal(M):
     ray("ray_sol", 0.0, -RAY, RAY, M)
     g = bos("portal", (0, 0, 0.12))
     zust = 7.75
-    portal_govde(M, g, span, zust, 0.85, cift_ayak=False, kanca_z=1.4)
+    portal_govde(M, g, span, zust, 0.85, cift_ayak=False, kanca_z=1.4,
+                 foto=("zincirli_vinc_2ton.png", 1.8, 0.62) if BEYAZ else None)
     # yol kirişi üzerindeki baş arabası
     bas_araba("bas_sag", span, -1.6, 1.6, M, g, z=6.68)
     kutu("sag_bas_baglanti", (0.5, 1.6, 0.25), (span, 0, zust - 0.85 - 0.12 + 0.0), M["turuncu"], g, bevel=0.01)
