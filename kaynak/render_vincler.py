@@ -722,19 +722,20 @@ def ortam(M, **kw):
 
 
 def foto_vinc(dosya, nesne, nokta, yukseklik, capa=0.5, dikey=0.0, arkasinda=(), halat=None,
-              eksen=None):
+              eksen=None, genislik_carpani=1.0):
     """Gerçek ürün fotoğrafını sahnedeki bir düzleme perspektifli olarak yerleştir.
 
     Fotoğraf gerçek ölçüsünde (yükseklik m) bir düzleme oturtulur; dört köşesi kameraya
     izdüşürülüp homografi ile bükülür. eksen=None: düzlem kameraya diktir (fotoğraf kendi
     perspektifini taşır; sahne kamerası fotoğrafın çekim açısına göre ayarlanır).
-    eksen verilirse düzlem `nesne` yerel `eksen` (yatay) ve Z doğrultularındadır.
+    eksen verilirse düzlem `nesne` yerel `eksen` (yatay) ve Z doğrultularındadır; fotoğraf aynı açıdan
+    çekilmişse genislik_carpani=1/cos(açı) kendi kısalmasını telafi eder (perspektif iki kez uygulanmaz).
     nokta: fotoğrafın yatayda `capa`, düşeyde `dikey` oranına (0 = üst kenar) denk gelen nokta,
     arkasinda: fotoğrafın önünde kalacak nesnelerin ad önekleri (ör. ön kiriş),
     halat: (ust_oran, alt_oran, kanca_z) - yalnız halat bandını uzatıp kancayı kanca_z'ye indirir.
     """
     FOTOLAR.append((os.path.join(FOTO_KLASOR, dosya), nesne, Vector(nokta), yukseklik, capa, dikey,
-                    tuple(arkasinda), halat, None if eksen is None else Vector(eksen).normalized()))
+                    tuple(arkasinda), halat, None if eksen is None else Vector(eksen).normalized(), genislik_carpani))
 
 
 def _homografi(hedef, kaynak):
@@ -787,10 +788,10 @@ def fotolari_ekle(cikti):
         return (q.x * W, (1 - q.y) * H)
 
     yerlesim = []
-    for dosya, nesne, nokta, yuk, capa, dikey, arkasinda, halat, eksen in FOTOLAR:
+    for dosya, nesne, nokta, yuk, capa, dikey, arkasinda, halat, eksen, gcarp in FOTOLAR:
         foto = Image.open(dosya).convert("RGBA")
         fw, fh = foto.size
-        gen = yuk * fw / fh
+        gen = yuk * fw / fh * gcarp
         if halat:
             r1, r2, kanca_z = halat
             a, b = round(r1 * fh), round(r2 * fh)
@@ -981,7 +982,8 @@ def sahne_duvar_pergel(M):
             y_konsol=-0.07, z_konsol=zb, aralik=1.2)
     # caraskal bomun alt flanşında (ray) yürür: flanş arabanın içinden geçer, tekerlekler üstüne basar
     foto_vinc("zincirli_vinc_2ton.png", g, (3.25, 0, zb - 0.282), 1.25, capa=0.62, dikey=0.165,
-              arkasinda=("festoon", "bom_alt"))
+              arkasinda=("festoon", "bom_alt"), eksen=(1, 0, 0),
+              genislik_carpani=1 / math.cos(math.radians(SAPMA)))  # bomla aynı perspektif
     if not BEYAZ:
         palet(M, (4.6, 0.1, 0), 0.35)
     if YAN:
@@ -1032,7 +1034,8 @@ def sahne_kolon_pergel(M):
     festoon("festoon", 0.35, 4.3, -0.27, zb + 0.07, 0.45, 3.45 - 0.45, M, g, n=5, L=1.1,
             y_konsol=-0.07, z_konsol=zb, aralik=1.2)
     foto_vinc("kompakt_vinc.png", g, (3.45, 0, zb - 0.282), 1.10, capa=0.66, dikey=0.235,
-              arkasinda=("festoon", "bom_alt"))
+              arkasinda=("festoon", "bom_alt"), eksen=(1, 0, 0),
+              genislik_carpani=1 / math.cos(math.radians(SAPMA)))  # bomla aynı perspektif
     if not BEYAZ:
         palet(M, (4.4, -0.6, 0), 0.3)
     if YAN:
