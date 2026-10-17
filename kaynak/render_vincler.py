@@ -924,6 +924,22 @@ def bos(name, loc=(0, 0, 0), rot=(0, 0, 0)):
     return e
 
 
+def foto_kamera(g, nokta, sapma, yukseklik, uzaklik, hedef, lens):
+    """Kamerayı ürün fotoğrafının çekim açısına koy: `nokta`dan (bom ekseni hizası) bom normaline göre
+    `sapma` derece sola ve `yukseklik` derece yukarı. Fotoğraflarda araba üst kenarı yatay olduğundan
+    kamera bom hizasındadır (yukseklik=0); uzaklaşan bom da böylece yatay görünür. Kadraj `hedef` noktasına mercek kaydırmayla ortalanır."""
+    bpy.context.view_layer.update()
+    m = g.matrix_world
+    H = m @ Vector(nokta)
+    n = (m.to_3x3() @ Vector((0, -1, 0))).normalized()  # bomun kameraya bakan yüzünün normali
+    yon = Matrix.Rotation(math.radians(-sapma), 3, "Z") @ n
+    t = math.radians(yukseklik)
+    cam = H + (yon * math.cos(t) + Vector((0, 0, math.sin(t)))) * uzaklik
+    hedef = Vector(hedef)
+    # yatay bakış hedefin yönünde; düşeyde mercek kaydırma
+    kamera(tuple(cam), (hedef.x, hedef.y, hedef.z), lens=lens, kaydir=True)
+
+
 def bom_logo(M, g, x, zb):
     """Bom gövdesine beyaz zemin üzerine 'beta' plakası."""
     kutu("bom_logozemin", (0.62, 0.004, 0.17), (x, -0.008, zb - 0.15), M["beyaz"], g, bevel=0.0015)
@@ -936,7 +952,8 @@ def sahne_duvar_pergel(M):
     beton = boya("beton_kolon", (0.36, 0.36, 0.345, 1), rough=0.85, var=0.1, bump=0.4)
     kutu("bina_kolon", (0.6, 0.6, 12.0), (-0.3, 0, 6.0), beton, bevel=0.01)
     # dönen grup (mafsal ekseni x=0.12)
-    g = bos("pergel", (0.12, 0, 0), (0, 0, math.radians(20 if YAN else 18)))  # zincirli vinç fotoğrafı ~20° soldan
+    SAPMA, YUKSEKLIK = 22, 0  # zincirli vinç fotoğrafının çekim açısı (soldan, yukarıdan; derece)
+    g = bos("pergel", (0.12, 0, 0), (0, 0, math.radians(SAPMA if YAN else 18)))
     # duvar konsolu (sabit)
     kutu("konsol_plaka", (0.03, 0.42, 2.0), (0.015, 0, 3.4), M["antrasit"], bevel=0.004)
     for z in (4.15, 2.75):
@@ -967,7 +984,7 @@ def sahne_duvar_pergel(M):
     if not BEYAZ:
         palet(M, (4.6, 0.1, 0), 0.35)
     if YAN:
-        kamera((2.0, -10.0, 3.9), (2.0, 0, 2.65), lens=46, kaydir=True)
+        foto_kamera(g, (3.25, 0, zb - 0.15), SAPMA, YUKSEKLIK, 11.5, (2.0, 0.6, 2.7), lens=44)
     else:
         kamera((4.6, -5.6, 2.6), (2.1, 0.3, 3.05), lens=34, dof=9)
     anahtar_isik((4, -9, 8), (2, 0, 2), 1800, boyut=6)
@@ -993,7 +1010,8 @@ def sahne_kolon_pergel(M):
     silindir("kolon", 0.17, H, (0, 0, H / 2 + 0.06), M["gri"], seg=64)
     silindir("kolon_bilezik", 0.20, 0.16, (0, 0, H + 0.06), M["antrasit"], seg=64, bevel=0.01)
     # dönen grup
-    g = bos("pergel", (0, 0, 0), (0, 0, math.radians(45 if YAN else 15)))  # kompakt vinç fotoğrafı ~45° soldan
+    SAPMA, YUKSEKLIK = 40, 0  # kompakt vinç fotoğrafının çekim açısı (soldan, yukarıdan; derece)
+    g = bos("pergel", (0, 0, 0), (0, 0, math.radians(SAPMA if YAN else 15)))
     zb = H + 0.48
     silindir("baslik", 0.215, 0.36, (0, 0, H + 0.30), M["antrasit"], g, seg=64, bevel=0.01)
     silindir("baslik_serit", 0.217, 0.05, (0, 0, H + 0.42), M["turuncu"], g, seg=64)
@@ -1017,7 +1035,7 @@ def sahne_kolon_pergel(M):
     if not BEYAZ:
         palet(M, (4.4, -0.6, 0), 0.3)
     if YAN:
-        kamera((1.6, -10.0, 4.3), (1.6, 0, 2.45), lens=42, kaydir=True)
+        foto_kamera(g, (3.45, 0, zb - 0.15), SAPMA, YUKSEKLIK, 11.5, (1.5, 0.9, 2.45), lens=40)
     else:
         kamera((4.4, -6.6, 2.4), (2.0, 0.3, 2.65), lens=32, dof=9)
     anahtar_isik((3, -9, 8), (1.5, 0, 2), 1800, boyut=6)

@@ -7,7 +7,7 @@ gibi tam yandan görünüşle render edildi (eski 3/4 açı için: GORUNUS=capra
 Vinçler modellenmedi; Beta'nın gerçek ürün fotoğrafları (`kaynak/vinc_foto/`,
 beyaz zemini temizlenmiş) gerçek ölçüsünde eklendi. Sahne kamerası her fotoğrafın çekim
 açısına göre ayarlandı: pergel bomu fotoğraftaki vinçle aynı açıya döndürüldü (duvar tipi
-~20°, kolon tipi ~45°), portallerde kamera araba fotoğrafı gibi ~9° yukarıdan bakar; dikeyler
+~22°, kolon tipi ~40°) ve kamera makineden bu açıyla, bom hizasından bakar (araba üst kenarı yatay), portallerde kamera araba fotoğrafı gibi ~9° yukarıdan bakar; dikeyler
 mercek kaydırmayla dik tutuldu. Arabaların tekerlekleri bom alt flanşına / kiriş rayına oturur:
 
 - Duvar tipi pergel → 2 ton zincirli vinç (`zincirli_vinc_2ton.png`)
