@@ -294,7 +294,7 @@ def s_siparis(ctx, L, t):
     p = eo(dilim(t, 1.7, 2.0))
     if p > 0:
         kutu(ctx, px + 40, y, pw - 80, 250, C["beyaz"], r=24, a=p)
-        for k, v in enumerate(("5 t", "12 m", "6 m")):
+        for k, v in enumerate(L.get("kart", ("5 t", "12 m", "6 m"))):
             yazi(ctx, v, px + 140 + k * 210, y + 120, 76, C["koyu"], kalin=True, hiza="orta", a=p)
         if L.get("iki"):
             for i, (a_, b_) in enumerate(L["etiketler"]):
