@@ -50,6 +50,18 @@ imalat ve statik hesap için onaylı proje esas alınır.
 ./venv/bin/python kaynak/teknik_resim.py teknik
 ```
 
+## Kurumsal animasyon (`video/beta_vinc_yolculugu.mp4`)
+
+"Bir vincin yolculuğu": tek kirişli köprülü vincin siparişten kuruluma hikâyesi; 1920×1080, 30 fps, ~73 sn,
+Beta kurumsal renkleri ve logosuyla 2B flat motion graphics. Sahneler: açılış, 01 Sipariş, 02 Keşif ve Ölçü,
+03 Mühendislik, 04 İmalat, 05 Sevkiyat, 06 Nakliye, 07 Kurulum ve Test, kapanış. Ses yok.
+
+```bash
+./venv/bin/pip install pycairo
+./venv/bin/python kaynak/animasyon.py video/beta_vinc_yolculugu.mp4
+./venv/bin/python kaynak/animasyon.py --kare 30 onizleme.png   # tek kare
+```
+
 ## Yeniden üretme
 
 ```bash
