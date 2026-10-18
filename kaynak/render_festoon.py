@@ -6,7 +6,7 @@ kanatlı araba plakası, iki dişli mil ve siyah yarım yuvarlak kablo kelepçes
 arasında ilmek yaparak sarkar. render_vincler.py'nin malzeme, ışık ve render altyapısını kullanır.
 
 Kullanım:
-    python render_festoon.py <genel|detay> <cikti.png> [ornek_sayisi]
+    python render_festoon.py <genel|detay|urun|urun_yan|urun_araba> <cikti.png> [ornek_sayisi]
 """
 import math
 import os
@@ -158,12 +158,21 @@ def ilmek(a, b, z, L):
     return nokta(lo)
 
 
-def festoon_sistemi(M, g, x_ray0, x_ray1, x_sabit, x_cek, n=7, L=1.3):
+def festoon_sistemi(M, g, x_ray0, x_ray1, x_sabit, x_cek, n=7, L=1.3, bagimsiz=False):
+    """bagimsiz=True: vinçsiz ürün görünümü (konsol yerine ray askı kelepçeleri, buat yok, kablo uçları serbest)."""
     c_ray("festoon_ray", x_ray0, x_ray1, Y_RAY, Z_RAY, M, g)
+    if bagimsiz:
+        for i, xk in enumerate((x_ray0 + 0.25, (x_ray0 + x_ray1) / 2 + 0.17, x_ray1 - 0.25)):
+            kutu(f"festoon_aski{i}", (0.06, RB + 0.03, 0.03), (xk, Y_RAY, Z_RAY + RH / 2 + 0.014), M["galvaniz"], g, bevel=0.003)
+            for sy in (-1, 1):
+                silindir(f"festoon_aski_c{i}{sy}", 0.006, 0.008, (xk, Y_RAY + sy * (RB / 2 + 0.008), Z_RAY + RH / 2 + 0.033),
+                         M["celik"], g, seg=6)
+            silindir(f"festoon_aski_mil{i}", 0.006, 0.10, (xk, Y_RAY, Z_RAY + RH / 2 + 0.08), M["celik"], g, seg=16)
+            silindir(f"festoon_aski_somun{i}", 0.011, 0.012, (xk, Y_RAY, Z_RAY + RH / 2 + 0.036), M["celik"], g, seg=6)
     # rayı ön kirişe bağlayan konsollar (dikme kiriş üst başlığına kaynaklı, kol + ray kelepçesi)
     yk_dis = -(YK + KB / 2 + 0.02)
     k = int((x_ray1 - x_ray0) / 1.5)
-    for i in range(k + 1):
+    for i in range(0 if bagimsiz else k + 1):
         xk = x_ray0 + 0.15 + i * (x_ray1 - x_ray0 - 0.3) / k
         if abs(xk - x_cek) < 0.25:
             continue
@@ -178,11 +187,14 @@ def festoon_sistemi(M, g, x_ray0, x_ray1, x_sabit, x_cek, n=7, L=1.3):
             silindir(f"festoon_konsol_c{i}{sy}", 0.006, 0.008, (xk, Y_RAY + sy * (RB / 2 + 0.008), Z_RAY + RH / 2 + 0.033),
                      M["celik"], g, seg=6)
     # ray sonu tapaları + ray ucunda beta yazısı
-    for xs in (x_ray0, x_ray1):
+    for xs in () if bagimsiz else (x_ray0, x_ray1):
         kutu(f"festoon_tapa{xs:g}", (0.012, RB + 0.012, RH + 0.012), (xs + (-0.006 if xs == x_ray0 else 0.006), Y_RAY, Z_RAY),
              M["turuncu"], g, bevel=0.002)
     RV.yazi("festoon_logo", "beta", (x_ray0 + 0.22, Y_RAY - RB / 2 - 0.0006, Z_RAY - 0.008), 0.03, M["antrasit"], g,
             extrude=0.0004)
+    if bagimsiz:
+        RV.yazi("festoon_logo2", "beta", (x_ray1 - 0.30, Y_RAY - RB / 2 - 0.0006, Z_RAY - 0.008), 0.03, M["antrasit"], g,
+                extrude=0.0004)
     # arabalar: sabit uçtan çekme arabasına eşit aralık
     xs = [x_sabit + i * (x_cek - x_sabit) / (n - 1) for i in range(n)]
     zk = None
@@ -201,6 +213,8 @@ def festoon_sistemi(M, g, x_ray0, x_ray1, x_sabit, x_cek, n=7, L=1.3):
         serit_kablo(f"festoon_kablo{j}", [(p[0], 0, p[1]) for p in pts], gen, 0.012, M["siyah"], g)
         o = bpy.data.objects[f"festoon_kablo{j}"]
         o.location.y = Y_RAY + dy
+    if bagimsiz:
+        return xs
     # besleme ucu: kiriş üstünde buat kutusu; sabit kelepçeden kutuya kısa kablo, kutudan besleme kablosu
     yb = -(YK + KB / 2) + 0.10
     kutu("festoon_buat", (0.30, 0.16, 0.26), (x_sabit - 0.10, yb, Z_UST + 0.13), M["antrasit"], g, bevel=0.012)
@@ -273,7 +287,35 @@ def sahne_detay(M):
     RV.anahtar_isik((-2, -4, Z_RAY + 3), hedef, 600, boyut=3)
 
 
-SAHNELER = {"genel": sahne_genel, "detay": sahne_detay}
+def urun(M):
+    g = RV.bos("urun", (0, 0, 0))
+    return festoon_sistemi(M, g, 0.0, 3.2, 0.45, 2.75, n=6, L=0.95, bagimsiz=True)
+
+
+def sahne_urun(M):
+    """Fotoğraftaki gibi ray ucundan, ray boyunca bakış."""
+    urun(M)
+    hedef = (2.3, Y_RAY, Z_RAY - 0.30)
+    RV.kamera((4.45, Y_RAY - 1.05, Z_RAY + 0.06), hedef, lens=58)
+
+
+def sahne_urun_yan(M):
+    """Önden üç çeyrek: tüm ray, arabalar ve kablo ilmekleri."""
+    urun(M)
+    hedef = (1.6, Y_RAY, Z_RAY - 0.38)
+    RV.kamera((2.7, Y_RAY - 4.0, Z_RAY + 0.30), hedef, lens=52)
+
+
+def sahne_urun_araba(M):
+    """Tek kablo arabası yakın plan."""
+    xs = urun(M)
+    x = xs[-2]
+    hedef = (x - 0.05, Y_RAY, Z_RAY - 0.27)
+    RV.kamera((x + 0.85, Y_RAY - 1.35, Z_RAY + 0.12), hedef, lens=50)
+
+
+SAHNELER = {"genel": sahne_genel, "detay": sahne_detay, "urun": sahne_urun, "urun_yan": sahne_urun_yan,
+            "urun_araba": sahne_urun_araba}
 
 
 def main():
@@ -285,7 +327,7 @@ def main():
     RV.FONT = RV.font_yukle()
     M = RV.malzemeler()
     RV.FOTOLAR.clear()
-    RV.dunya(0.4)
+    RV.dunya(1.0 if sahne.startswith("urun") else 0.4)
     SAHNELER[sahne](M)
     RV.studyo_isiklari()
     RV.render_ayarlari(cikti, ornek)
