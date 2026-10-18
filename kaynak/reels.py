@@ -457,42 +457,70 @@ def s_yol(ctx, L, t):
     ust_bant(ctx, L, 6, t)
 
 
+def dikey_hol(ctx, xl, xr, yr, zemin):
+    """Dikey kadraja göre müşteri holü: tavan kafesi, iki beton kolon, konsollar, yürüyüş yolu kirişleri."""
+    a2.gradyan_kutu(ctx, 0, 560, W, zemin - 560, C["duvar"], a2.renk("#E3E0DA"))
+    kutu(ctx, 0, zemin, W, 1720 - zemin, C["zemin"])
+    for i in range(10):
+        cizgi(ctx, [(i * 130, zemin), (i * 130 - 70, 1720)], C["gri"], lw=1, a=0.25)
+    cizgi(ctx, [(0, 640), (W, 640)], C["gri"], lw=6, a=0.6)
+    cizgi(ctx, [(0, 580), (W, 580)], C["gri"], lw=4, a=0.5)
+    for i in range(10):
+        xx = i * 120
+        cizgi(ctx, [(xx, 640), (xx + 60, 580), (xx + 120, 640)], C["gri"], lw=3, a=0.4)
+    for xk, yon in ((xl - 70, 1), (xr + 70, -1)):
+        kutu(ctx, xk - 30, 640, 60, zemin - 640, C["beton"])
+        kutu(ctx, xk - 30, 640, 12, zemin - 640, a2.renk("#A29E96"))
+        kutu(ctx, xk + (12 if yon > 0 else -52), yr + 34, 40, 46, C["beton"])
+        a2.i_profil(ctx, xk + yon * 62 - 30, yr, 60, 34, C["antrasit"])
+
+
 def s_kurulum(ctx, L, t):
-    def ciz(c):
-        xl, xr, yr = 360, 1560, 400
-        a2.hol(c, xl, xr, yr, [300, 1620])
-        kalk = eio(dilim(t, 0.1, 1.4))
-        oturt = eio(dilim(t, 1.4, 1.8))
-        hedef = yr - 92
-        if t < 1.9:
-            ky = lerp(a2.ZEMIN - 186, hedef - 40, kalk)
-            ky = lerp(ky, hedef, oturt) if kalk >= 1 else ky
-            cizgi(c, [(960, 40), (960, ky - 80)], C["koyu"], lw=3)
-            for d in (-420, 420):
-                cizgi(c, [(960, ky - 80), (960 + d, ky)], C["koyu"], lw=2.5)
-            a2.gradyan_kutu(c, 325, ky, 1270, 54, C["turuncu_a"], C["turuncu_k"])
-            kutu(c, 325, ky - 6, 1270, 8, C["antrasit"])
-        else:
-            car = eo(dilim(t, 1.9, 2.4))
-            inis = eio(dilim(t, 2.4, 3.0))
-            kalk2 = eio(dilim(t, 3.0, 3.8))
-            gez = eio(dilim(t, 3.8, 4.6))
-            cx = lerp(1700, 760, car) if car < 1 else lerp(760, 1180, gez)
-            kz = lerp(hedef + 130, a2.ZEMIN - 230, inis)
-            kz = lerp(kz, a2.ZEMIN - 430, kalk2)
-            yukv = (180, 120, "5 t") if t >= 3.0 else None
-            a2.kopru_vinc(c, xl, xr, yr, kiris_y=hedef, cx=cx, kanca_y=kz, yuk=yukv)
-            if t < 3.0 and inis > 0.5:
-                kutu(c, 670, a2.ZEMIN - 120, 180, 120, C["gri"], r=4)
-                yazi(c, "5 t", 760, a2.ZEMIN - 46, 36, C["beyaz"], kalin=True, hiza="orta")
+    xl, xr, yr, zemin = 175, 905, 860, 1620
+    hedef = yr - 92
     koyu_zemin(ctx, a2.renk("#2B3036"), C["koyu"])
-    baslik(ctx, L, L["b7"], L["s7"], t)
     dx, dy = sarsinti(t, [1.8], guc=14)
-    dunya(ctx, 0.9, W / 2 + dx, 1150 + dy, ciz)
+    ctx.save()
+    ctx.translate(dx, dy)
+    dikey_hol(ctx, xl, xr, yr, zemin)
+    kalk = eio(dilim(t, 0.1, 1.4))
+    oturt = eio(dilim(t, 1.4, 1.8))
+    if t < 1.9:
+        ky = lerp(zemin - 120, hedef - 40, kalk)
+        ky = lerp(ky, hedef, oturt) if kalk >= 1 else ky
+        cizgi(ctx, [(W / 2, 580), (W / 2, ky - 70)], C["koyu"], lw=3)
+        for d in (-300, 300):
+            cizgi(ctx, [(W / 2, ky - 70), (W / 2 + d, ky)], C["koyu"], lw=2.5)
+        kutu(ctx, W / 2 - 18, ky - 88, 36, 24, C["antrasit"], r=4)
+        a2.gradyan_kutu(ctx, xl - 35, ky, xr - xl + 70, 54, C["turuncu_a"], C["turuncu_k"])
+        kutu(ctx, xl - 35, ky - 6, xr - xl + 70, 8, C["antrasit"])
+        kutu(ctx, W / 2 - 70, ky + 12, 140, 30, C["beyaz"], r=4)
+        resim(ctx, LOGO_K, W / 2, ky + 27, 100, orta=True)
+    else:
+        car = eo(dilim(t, 1.9, 2.4))
+        inis = eio(dilim(t, 2.4, 3.0))
+        kalk2 = eio(dilim(t, 3.0, 3.8))
+        gez = eio(dilim(t, 3.8, 4.6))
+        x_yuk = 420
+        cx = lerp(xr + 200, x_yuk, car) if car < 1 else lerp(x_yuk, 680, gez)
+        kz = lerp(hedef + 130, zemin - 230, inis)
+        kz = lerp(kz, zemin - 470, kalk2)
+        yukv = (180, 120, "5 t") if t >= 3.0 else None
+        a2.kopru_vinc(ctx, xl, xr, yr, kiris_y=hedef, cx=cx, kanca_y=kz, yuk=yukv)
+        if t < 3.0 and inis > 0.5:
+            kutu(ctx, x_yuk - 90, zemin - 120, 180, 120, C["gri"], r=4)
+            yazi(ctx, "5 t", x_yuk, zemin - 46, 36, C["beyaz"], kalin=True, hiza="orta")
+        pb = dilim(t, 1.9, 2.3)
+        if 0 < pb < 1:
+            for xb in (xl, xr):
+                for d in (-30, 0, 30):
+                    daire(ctx, xb + d, hedef + 64, 10 * math.sin(pb * math.pi), a2.renk("#FFF3C4"), a=0.9)
+    ctx.restore()
+    baslik(ctx, L, L["b7"], L["s7"], t)
     p = geri(dilim(t, 4.3, 4.6))
     if p > 0:
         ctx.save()
-        ctx.translate(W / 2, 1630)
+        ctx.translate(W / 2, 1790)
         ctx.scale(p, p)
         ctx.rotate(-0.08)
         kutu(ctx, -230, -60, 460, 110, C["yesil"], r=20)
