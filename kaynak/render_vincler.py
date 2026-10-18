@@ -114,8 +114,8 @@ def beton_dokusu(name="beton_kolon"):
     n1.inputs["Roughness"].default_value = 0.6
     L.new(tc.outputs["Object"], n1.inputs["Vector"])
     r1 = nt.nodes.new("ShaderNodeValToRGB")
-    r1.color_ramp.elements[0].color = srgb("#8E8C87")
-    r1.color_ramp.elements[1].color = srgb("#B3B0A9")
+    r1.color_ramp.elements[0].color = srgb("#77746E")
+    r1.color_ramp.elements[1].color = srgb("#BAB6AE")
     L.new(n1.outputs["Fac"], r1.inputs["Fac"])
     # düşey akma lekeleri (Z yönünde uzatılmış gürültü)
     mp = nt.nodes.new("ShaderNodeMapping")
@@ -128,9 +128,9 @@ def beton_dokusu(name="beton_kolon"):
     mx1 = nt.nodes.new("ShaderNodeMix")
     mx1.data_type = "RGBA"
     mx1.blend_type = "MULTIPLY"
-    mx1.inputs["Factor"].default_value = 0.22
+    mx1.inputs["Factor"].default_value = 0.4
     L.new(r1.outputs["Color"], mx1.inputs["A"])
-    L.new(n2.outputs["Color"], mx1.inputs["B"])
+    L.new(n2.outputs["Fac"], mx1.inputs["B"])
     # kalıp tahtası izleri (yatay bantlar, 15 cm)
     wv = nt.nodes.new("ShaderNodeTexWave")
     wv.wave_type = "BANDS"
@@ -142,11 +142,11 @@ def beton_dokusu(name="beton_kolon"):
     # gözenekler (küçük koyu boşluklar)
     vr = nt.nodes.new("ShaderNodeTexVoronoi")
     vr.feature = "F1"
-    vr.inputs["Scale"].default_value = 140.0
+    vr.inputs["Scale"].default_value = 16.0
     L.new(tc.outputs["Object"], vr.inputs["Vector"])
     gz = nt.nodes.new("ShaderNodeMapRange")
     gz.inputs["From Min"].default_value = 0.0
-    gz.inputs["From Max"].default_value = 0.09
+    gz.inputs["From Max"].default_value = 0.11
     gz.inputs["To Min"].default_value = 0.0
     gz.inputs["To Max"].default_value = 1.0
     L.new(vr.outputs["Distance"], gz.inputs["Value"])
@@ -162,7 +162,13 @@ def beton_dokusu(name="beton_kolon"):
     L.new(gz.outputs["Result"], mx3.inputs["Factor"])
     mx3.inputs["A"].default_value = (0.22, 0.22, 0.21, 1)
     L.new(mx1.outputs["Result"], mx3.inputs["B"])
-    L.new(mx3.outputs["Result"], bs.inputs["Base Color"])
+    mx4 = nt.nodes.new("ShaderNodeMix")
+    mx4.data_type = "RGBA"
+    mx4.blend_type = "MULTIPLY"
+    mx4.inputs["Factor"].default_value = 0.12
+    L.new(mx3.outputs["Result"], mx4.inputs["A"])
+    L.new(wv.outputs["Fac"], mx4.inputs["B"])
+    L.new(mx4.outputs["Result"], bs.inputs["Base Color"])
     bs.inputs["Roughness"].default_value = 0.9
     # kabartı: gözenek + ince kum + kalıp izi
     n3 = nt.nodes.new("ShaderNodeTexNoise")
@@ -170,16 +176,16 @@ def beton_dokusu(name="beton_kolon"):
     n3.inputs["Detail"].default_value = 4
     L.new(tc.outputs["Object"], n3.inputs["Vector"])
     b1 = nt.nodes.new("ShaderNodeBump")
-    b1.inputs["Strength"].default_value = 0.25
+    b1.inputs["Strength"].default_value = 0.45
     b1.inputs["Distance"].default_value = 0.001
     L.new(n3.outputs["Fac"], b1.inputs["Height"])
     b2 = nt.nodes.new("ShaderNodeBump")
-    b2.inputs["Strength"].default_value = 0.6
-    b2.inputs["Distance"].default_value = 0.002
+    b2.inputs["Strength"].default_value = 1.0
+    b2.inputs["Distance"].default_value = 0.004
     L.new(gz.outputs["Result"], b2.inputs["Height"])
     L.new(b1.outputs["Normal"], b2.inputs["Normal"])
     b3 = nt.nodes.new("ShaderNodeBump")
-    b3.inputs["Strength"].default_value = 0.12
+    b3.inputs["Strength"].default_value = 0.35
     b3.inputs["Distance"].default_value = 0.002
     L.new(wv.outputs["Fac"], b3.inputs["Height"])
     L.new(b2.outputs["Normal"], b3.inputs["Normal"])
