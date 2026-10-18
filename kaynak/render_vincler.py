@@ -82,6 +82,17 @@ def boya(name, color, rough=0.35, metal=0.0, coat=0.0, var=0.08, bump=0.0):
             nt.links.new(tc.outputs["Object"], nz2.inputs["Vector"])
             nt.links.new(nz2.outputs["Fac"], bp.inputs["Height"])
             nt.links.new(bp.outputs["Normal"], bsdf.inputs["Normal"])
+            if coat:
+                # cila: ince "portakal kabuğu" dokusu (boyalı çelik fotoğraflarındaki yansıma dalgalanması)
+                bp2 = nt.nodes.new("ShaderNodeBump")
+                bp2.inputs["Strength"].default_value = 0.035
+                bp2.inputs["Distance"].default_value = 0.0006
+                nz3 = nt.nodes.new("ShaderNodeTexNoise")
+                nz3.inputs["Scale"].default_value = 420.0
+                nz3.inputs["Detail"].default_value = 2.0
+                nt.links.new(tc.outputs["Object"], nz3.inputs["Vector"])
+                nt.links.new(nz3.outputs["Fac"], bp2.inputs["Height"])
+                nt.links.new(bp2.outputs["Normal"], bsdf.inputs["Coat Normal"])
     m.diffuse_color = color
     MATS[name] = m
     return m
@@ -92,7 +103,7 @@ def malzemeler():
         turuncu=boya("beta_turuncu", BETA_TURUNCU, rough=0.32, coat=0.25, bump=0.05),
         antrasit=boya("beta_antrasit", BETA_ANTRASIT, rough=0.42, bump=0.05),
         gri=boya("beta_gri", BETA_GRI, rough=0.38, bump=0.04),
-        celik=boya("celik", (0.62, 0.62, 0.63, 1), rough=0.28, metal=1.0, var=0.1),
+        celik=fircali_celik(boya("celik", (0.62, 0.62, 0.63, 1), rough=0.28, metal=1.0, var=0.1)),
         galvaniz=boya("galvaniz", (0.55, 0.56, 0.58, 1), rough=0.35, metal=1.0, var=0.12),
         halat=boya("halat", (0.33, 0.34, 0.35, 1), rough=0.45, metal=1.0, var=0.1),
         siyah=boya("siyah", (0.025, 0.025, 0.028, 1), rough=0.55),
@@ -101,6 +112,15 @@ def malzemeler():
         sari=boya("sari_cizgi", srgb("#F2C200"), rough=0.5, var=0.15),
         ray=boya("ray", (0.42, 0.42, 0.43, 1), rough=0.32, metal=1.0, var=0.15),
     )
+
+
+def fircali_celik(m):
+    try:
+        b = m.node_tree.nodes["Principled BSDF"]
+        b.inputs["Anisotropic"].default_value = 0.6
+    except Exception:
+        pass
+    return m
 
 
 def obj(name, mesh, mat=None, parent=None, smooth=False, bevel=0.0, seg=3):
@@ -831,6 +851,9 @@ def fotolari_ekle(cikti):
         hedef = [kose(0, 0, eksen), kose(1, 0, eksen), kose(1, 1, eksen), kose(0, 1, eksen)]
         katsayi = _homografi(hedef, [(0, 0), (fw, 0), (fw, fh), (0, fh)])
         bukulmus = foto.transform((W, H), Image.PERSPECTIVE, katsayi, Image.BICUBIC)
+        if gen * W > fw * 3:  # büyütülen fotoğrafa hafif keskinlik
+            from PIL import ImageFilter
+            bukulmus = bukulmus.filter(ImageFilter.UnsharpMask(radius=1.4, percent=55, threshold=2))
         yerlesim.append((bukulmus, 0, 0, arkasinda))
     for foto, x, y, _ in yerlesim:
         img.alpha_composite(foto, (x, y))
@@ -887,6 +910,42 @@ def anahtar_isik(loc, hedef, guc, boyut=4.0, renk=(1.0, 0.96, 0.9)):
     bpy.context.scene.collection.objects.link(lo)
     lo.location = loc
     lo.rotation_euler = (Vector(hedef) - Vector(loc)).to_track_quat("-Z", "Y").to_euler()
+    return lo
+
+
+def studyo_isiklari():
+    """Ürün fotoğrafı stüdyo düzeni: sol üstte büyük ana softbox, sağda dolgu, arkadan kontur ışığı.
+
+    Konumlar kameraya ve sahnedeki nesnelerin sınır kutusuna göre hesaplanır.
+    """
+    sc = bpy.context.scene
+    bpy.context.view_layer.update()
+    lo = Vector((1e9, 1e9, 1e9))
+    hi = -lo
+    for o in sc.objects:
+        if o.type in {"MESH", "CURVE"} and not o.name.startswith(("ray_", "ray0", "ray1", "tambur_kanal")):
+            for c in o.bound_box:
+                w = o.matrix_world @ Vector(c)
+                lo = Vector(map(min, lo, w))
+                hi = Vector(map(max, hi, w))
+    mrk = (lo + hi) / 2
+    boy = (hi - lo).length
+    cam = sc.camera.location
+    ileri = Vector((mrk.x - cam.x, mrk.y - cam.y, 0)).normalized()
+    sag = ileri.cross(Vector((0, 0, 1))).normalized()
+    D = boy * 1.1
+
+    def isik(ad, yon, yuk, guc, boyut, renk):
+        p = mrk + yon.normalized() * D + Vector((0, 0, yuk * D))
+        anahtar_isik(p, mrk, guc * D * D, boyut=boyut * boy, renk=renk).name = ad
+
+    # sahnelerin kendi anahtar ışıkları yerine stüdyo düzeni
+    for o in [o for o in sc.objects if o.type == "LIGHT" and o.name.startswith("anahtar")]:
+        bpy.data.objects.remove(o, do_unlink=True)
+
+    isik("softbox_ana", -ileri - sag * 0.9, 0.75, 14.0, 0.55, (1.0, 0.97, 0.93))
+    isik("softbox_dolgu", -ileri + sag * 1.1, 0.2, 4.0, 0.6, (0.94, 0.97, 1.0))
+    isik("kontur", ileri * 1.2 + sag * 0.4, 0.9, 9.0, 0.35, (1.0, 1.0, 1.0))
 
 
 def render_ayarlari(cikti, ornek):
@@ -901,12 +960,22 @@ def render_ayarlari(cikti, ornek):
         sc.cycles.denoiser = "OPENIMAGEDENOISE"
     except Exception:
         pass
-    sc.cycles.max_bounces = 8
+    sc.cycles.max_bounces = 12
+    sc.cycles.glossy_bounces = 6
+    try:
+        sc.cycles.denoising_input_passes = "RGB_ALBEDO_NORMAL"
+        sc.cycles.denoising_prefilter = "ACCURATE"
+        sc.cycles.denoising_quality = "HIGH"
+    except Exception:
+        pass
+    sc.cycles.use_light_tree = True
+    sc.cycles.filter_width = 1.2
     sc.cycles.caustics_reflective = False
     sc.cycles.caustics_refractive = False
     sc.cycles.blur_glossy = 0.5
-    sc.render.resolution_x = 1600
-    sc.render.resolution_y = 1200
+    # fotoğraf kalitesi: 3200x2400 (12 MP 4:3 katalog fotoğrafı ölçüsüne yakın)
+    sc.render.resolution_x = 3200
+    sc.render.resolution_y = 2400
     sc.render.resolution_percentage = int(os.environ.get("YUZDE", "100"))
     sc.render.film_transparent = BEYAZ
     sc.render.image_settings.file_format = "PNG"
@@ -918,7 +987,7 @@ def render_ayarlari(cikti, ornek):
         vs.look = "AgX - Punchy" if BEYAZ else "AgX - Medium High Contrast"
     except Exception:
         pass
-    vs.exposure = -0.3 if BEYAZ else 0.0
+    vs.exposure = -0.1 if BEYAZ else 0.0
     sc.render.threads_mode = "AUTO"
 
 
@@ -1345,7 +1414,7 @@ def main():
     global FONT
     argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else sys.argv[1:]
     sahne, cikti = argv[0], argv[1]
-    ornek = int(argv[2]) if len(argv) > 2 else 160
+    ornek = int(argv[2]) if len(argv) > 2 else 512
     sifirla()
     MATS.clear()
     FONT = font_yukle()
@@ -1354,8 +1423,7 @@ def main():
     dunya(0.4 if BEYAZ else 0.12)
     SAHNELER[sahne](M)
     if BEYAZ:
-        # stüdyo dolgu ışığı
-        anahtar_isik((-6, -8, 7), (2, 0, 2), 900, boyut=8, renk=(0.95, 0.97, 1.0))
+        studyo_isiklari()
     render_ayarlari(cikti, ornek)
     bpy.ops.render.render(write_still=True)
     fotolari_ekle(cikti)
