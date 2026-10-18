@@ -72,6 +72,13 @@ Beta kurumsal renkleri ve logosuyla 2B flat motion graphics. Sahneler: açılı�
 ./venv/bin/python kaynak/reels.py en video/beta_reels_en.mp4
 ```
 
+Kumanda sistemleri Reels'i (`video/beta_reels_kumanda_tr_en.mp4`, TR+EN tek video): butonyer, telsiz kumanda,
+pano, frekans invertörü, PLC, güvenlik, devreye alma. Paylaşım metinleri: `video/aciklama_kumanda.md`.
+
+```bash
+./venv/bin/python kaynak/reels_kumanda.py video/beta_reels_kumanda_tr_en.mp4
+```
+
 ## Yeniden üretme
 
 ```bash
