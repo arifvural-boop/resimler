@@ -79,6 +79,18 @@ pano, frekans invertörü, PLC, güvenlik, devreye alma. Paylaşım metinleri: `
 ./venv/bin/python kaynak/reels_kumanda.py video/beta_reels_kumanda_tr_en.mp4
 ```
 
+## C raylı festoon kablo sistemi
+
+Fotoğraflardaki C ray profili, turuncu plakalı kablo arabaları ve siyah kelepçeler çift kirişli köprülü vinçte
+toplandı: `gercekci/festoon_kopru_vinc.png` (genel), `gercekci/festoon_detay.png` (ray boyunca yakın plan),
+`gercekci/festoon_sistemi_pafta.png` (numaralı parça açıklamalı TR/EN tanıtım paftası).
+
+```bash
+./venv/bin/python kaynak/render_festoon.py genel gercekci/festoon_kopru_vinc.png 384
+./venv/bin/python kaynak/render_festoon.py detay gercekci/festoon_detay.png 384
+./venv/bin/python kaynak/festoon_pafta.py gercekci/festoon_sistemi_pafta.png
+```
+
 ## Yeniden üretme
 
 ```bash
