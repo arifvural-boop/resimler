@@ -7,14 +7,14 @@ gibi tam yandan görünüşle render edildi (eski 3/4 açı için: GORUNUS=capra
 Vinçler modellenmedi; Beta'nın gerçek ürün fotoğrafları (`kaynak/vinc_foto/`,
 beyaz zemini temizlenmiş) gerçek ölçüsünde eklendi. Sahne kamerası her fotoğrafın çekim
 açısına göre ayarlandı: pergel bomu fotoğraftaki vinçle aynı açıya döndürüldü (duvar tipi
-~22°, kolon tipi ~40°) ve kamera makineden bu açıyla, bom hizasından bakar (araba üst kenarı yatay), portallerde kamera araba fotoğrafı gibi ~9° yukarıdan bakar; dikeyler
+~10°, kolon tipi ~10°) ve kamera makineden bu açıyla, bom hizasından bakar (araba üst kenarı yatay), portallerde kamera araba fotoğrafı gibi ~9° yukarıdan bakar; dikeyler
 mercek kaydırmayla dik tutuldu. Arabaların tekerlekleri bom alt flanşına / kiriş rayına oturur:
 
 - Duvar tipi pergel → 2 ton zincirli vinç (`zincirli_vinc_2ton.png`)
-- Kolon tipi pergel → kompakt vinç (`kompakt_vinc.png`)
+- Kolon tipi pergel → aynı 2 ton zincirli vinç; iki pergelde de araba 3B (alt flanşta), caraskal fotoğrafı askıda
 - Yarı portal ve portal → halatlı vinç arabası (`halatli_vinc_araba.png`): gerçek çift kirişli
   portal yapısı (ayaklar kirişe dik düzlemde A, raylar kirişe dik); araba iki kirişin rayına basar,
-  kamera fotoğraf gibi kiriş doğrultusuna yakın (~25°) ve ~9° yukarıdan; halat bandı uzatıldı
+  kamera fotoğraf gibi kiriş doğrultusuna yakın (~8°) ve ~9° yukarıdan; halat bandı uzatıldı
 
 | Ürün | Orijinal | Gerçekçi |
 |---|---|---|
@@ -28,6 +28,8 @@ mercek kaydırmayla dik tutuldu. Arabaların tekerlekleri bom alt flanşına / k
 - 3200×2400 çıktı, 320 örnek + OpenImageDenoise (albedo/normal, yüksek kalite)
 - Ürün fotoğrafı stüdyo ışığı: sol üst ana softbox, sağ dolgu, arka kontur ışığı
 - Boyada cila ve ince "portakal kabuğu" dokusu, fırçalanmış çelik pim ve cıvatalar
+
+- Duvar tipi pergelde bina kolonu brüt beton dokulu (gözenek, akma lekesi, kalıp izi) ve zemine kadar
 
 ## Marka uyarlaması
 

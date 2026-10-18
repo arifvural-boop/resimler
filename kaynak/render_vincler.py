@@ -98,6 +98,96 @@ def boya(name, color, rough=0.35, metal=0.0, coat=0.0, var=0.08, bump=0.0):
     return m
 
 
+def beton_dokusu(name="beton_kolon"):
+    """Brüt beton: renk dalgalanması, gözenekler, düşey akma lekeleri, kalıp tahtası izleri."""
+    if name in MATS:
+        return MATS[name]
+    m = bpy.data.materials.new(name)
+    nt = node_tree(m)
+    bs = nt.nodes["Principled BSDF"]
+    L = nt.links
+    tc = nt.nodes.new("ShaderNodeTexCoord")
+    # temel renk dalgalanması
+    n1 = nt.nodes.new("ShaderNodeTexNoise")
+    n1.inputs["Scale"].default_value = 2.2
+    n1.inputs["Detail"].default_value = 10
+    n1.inputs["Roughness"].default_value = 0.6
+    L.new(tc.outputs["Object"], n1.inputs["Vector"])
+    r1 = nt.nodes.new("ShaderNodeValToRGB")
+    r1.color_ramp.elements[0].color = srgb("#8E8C87")
+    r1.color_ramp.elements[1].color = srgb("#B3B0A9")
+    L.new(n1.outputs["Fac"], r1.inputs["Fac"])
+    # düşey akma lekeleri (Z yönünde uzatılmış gürültü)
+    mp = nt.nodes.new("ShaderNodeMapping")
+    mp.inputs["Scale"].default_value = (9.0, 9.0, 0.6)
+    L.new(tc.outputs["Object"], mp.inputs["Vector"])
+    n2 = nt.nodes.new("ShaderNodeTexNoise")
+    n2.inputs["Scale"].default_value = 1.5
+    n2.inputs["Detail"].default_value = 6
+    L.new(mp.outputs["Vector"], n2.inputs["Vector"])
+    mx1 = nt.nodes.new("ShaderNodeMix")
+    mx1.data_type = "RGBA"
+    mx1.blend_type = "MULTIPLY"
+    mx1.inputs["Factor"].default_value = 0.22
+    L.new(r1.outputs["Color"], mx1.inputs["A"])
+    L.new(n2.outputs["Color"], mx1.inputs["B"])
+    # kalıp tahtası izleri (yatay bantlar, 15 cm)
+    wv = nt.nodes.new("ShaderNodeTexWave")
+    wv.wave_type = "BANDS"
+    wv.bands_direction = "Z"
+    wv.wave_profile = "SAW"
+    wv.inputs["Scale"].default_value = 0.53
+    wv.inputs["Distortion"].default_value = 0.4
+    L.new(tc.outputs["Object"], wv.inputs["Vector"])
+    # gözenekler (küçük koyu boşluklar)
+    vr = nt.nodes.new("ShaderNodeTexVoronoi")
+    vr.feature = "F1"
+    vr.inputs["Scale"].default_value = 140.0
+    L.new(tc.outputs["Object"], vr.inputs["Vector"])
+    gz = nt.nodes.new("ShaderNodeMapRange")
+    gz.inputs["From Min"].default_value = 0.0
+    gz.inputs["From Max"].default_value = 0.09
+    gz.inputs["To Min"].default_value = 0.0
+    gz.inputs["To Max"].default_value = 1.0
+    L.new(vr.outputs["Distance"], gz.inputs["Value"])
+    mx2 = nt.nodes.new("ShaderNodeMix")
+    mx2.data_type = "RGBA"
+    mx2.blend_type = "MULTIPLY"
+    L.new(gz.outputs["Result"], mx2.inputs["Factor"])
+    mx2.inputs["A"].default_value = (0.35, 0.35, 0.34, 1)
+    L.new(mx1.outputs["Result"], mx2.inputs["B"])
+    # gz=0 (gözenek) -> koyu, gz=1 -> beton rengi
+    mx3 = nt.nodes.new("ShaderNodeMix")
+    mx3.data_type = "RGBA"
+    L.new(gz.outputs["Result"], mx3.inputs["Factor"])
+    mx3.inputs["A"].default_value = (0.22, 0.22, 0.21, 1)
+    L.new(mx1.outputs["Result"], mx3.inputs["B"])
+    L.new(mx3.outputs["Result"], bs.inputs["Base Color"])
+    bs.inputs["Roughness"].default_value = 0.9
+    # kabartı: gözenek + ince kum + kalıp izi
+    n3 = nt.nodes.new("ShaderNodeTexNoise")
+    n3.inputs["Scale"].default_value = 300
+    n3.inputs["Detail"].default_value = 4
+    L.new(tc.outputs["Object"], n3.inputs["Vector"])
+    b1 = nt.nodes.new("ShaderNodeBump")
+    b1.inputs["Strength"].default_value = 0.25
+    b1.inputs["Distance"].default_value = 0.001
+    L.new(n3.outputs["Fac"], b1.inputs["Height"])
+    b2 = nt.nodes.new("ShaderNodeBump")
+    b2.inputs["Strength"].default_value = 0.6
+    b2.inputs["Distance"].default_value = 0.002
+    L.new(gz.outputs["Result"], b2.inputs["Height"])
+    L.new(b1.outputs["Normal"], b2.inputs["Normal"])
+    b3 = nt.nodes.new("ShaderNodeBump")
+    b3.inputs["Strength"].default_value = 0.12
+    b3.inputs["Distance"].default_value = 0.002
+    L.new(wv.outputs["Fac"], b3.inputs["Height"])
+    L.new(b2.outputs["Normal"], b3.inputs["Normal"])
+    L.new(b3.outputs["Normal"], bs.inputs["Normal"])
+    MATS[name] = m
+    return m
+
+
 def malzemeler():
     return dict(
         turuncu=boya("beta_turuncu", BETA_TURUNCU, rough=0.32, coat=0.25, bump=0.05),
@@ -731,6 +821,7 @@ BEYAZ = os.environ.get("ORTAM", "beyaz") == "beyaz"
 FOTO_KLASOR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "vinc_foto")
 YAN = BEYAZ and os.environ.get("GORUNUS", "yan") == "yan"  # orijinal çizimler gibi tam yandan görünüş
 RAY = 6.0 if BEYAZ else 30.0
+PORTAL_SAPMA = 8
 FOTOLAR = []  # (dosya, nesne, yerel_nokta, yukseklik_m, yatay_capa)
 
 
@@ -1059,8 +1150,9 @@ def bom_logo(M, g, x, zb):
 def sahne_duvar_pergel(M):
     ortam(M, arka_y=7.0)
     # bina betonarme kolonu
-    beton = boya("beton_kolon", (0.36, 0.36, 0.345, 1), rough=0.85, var=0.1, bump=0.4)
-    kutu("bina_kolon", (0.6, 0.6, 12.0), (-0.3, 0, 6.0), beton, bevel=0.01)
+    beton = beton_dokusu()
+    kutu("bina_kolon", (0.6, 0.6, 12.0), (-0.3, 0, 6.0), beton, bevel=0.02)  # pahlı köşeler
+    kutu("zemin_doseme", (2.2, 2.2, 0.06), (0.3, 0, -0.03), beton_dokusu("beton_doseme"), bevel=0.01)
     zb = 4.30  # bom üst kotu (IPE 300)
     z_alt, z_ust = zb - 0.16, 5.55  # mafsal kotları: alt = bom kökü, üst = gergi başı
     XP = 0.22  # mafsal (pim) ekseni = dönme ekseni
@@ -1120,7 +1212,7 @@ def sahne_duvar_pergel(M):
     if not BEYAZ:
         palet(M, (4.6, 0.1, 0), 0.35)
     if YAN:
-        foto_kamera(g, (3.25, 0, zb - 0.15), SAPMA, YUKSEKLIK, 12.5, (2.0, 0.6, 3.3), lens=42)
+        foto_kamera(g, (3.25, 0, zb - 0.15), SAPMA, YUKSEKLIK, 12.5, (2.0, 0.6, 2.95), lens=37)  # kolon zemine kadar
     else:
         kamera((4.6, -5.6, 2.6), (2.1, 0.3, 3.05), lens=34, dof=9)
     anahtar_isik((4, -9, 8), (2, 0, 2), 1800, boyut=6)
@@ -1146,7 +1238,7 @@ def sahne_kolon_pergel(M):
     silindir("kolon", 0.17, H, (0, 0, H / 2 + 0.06), M["gri"], seg=64)
     silindir("kolon_bilezik", 0.20, 0.16, (0, 0, H + 0.06), M["antrasit"], seg=64, bevel=0.01)
     # dönen grup
-    SAPMA, YUKSEKLIK = 40, 0  # kompakt vinç fotoğrafının çekim açısı (soldan, yukarıdan; derece)
+    SAPMA, YUKSEKLIK = 10, 0  # zincirli vinç fotoğrafının çekim açısı (soldan, yukarıdan; derece)
     g = bos("pergel", (0, 0, 0), (0, 0, math.radians(SAPMA if YAN else 15)))
     zb = H + 0.48
     silindir("baslik", 0.215, 0.36, (0, 0, H + 0.30), M["antrasit"], g, seg=64, bevel=0.01)
@@ -1177,8 +1269,10 @@ def sahne_kolon_pergel(M):
         civata(f"bilezik_c{i}", (0.192 * math.cos(a_), 0.192 * math.sin(a_), H + 0.14), "Z", M, None, r=0.012)
     festoon("festoon", 0.35, 4.3, -0.23, zb - 0.09, 0.45, 3.45 - 0.45, M, g, n=5, L=1.1,
             y_konsol=-0.02, z_konsol=zb - 0.022, aralik=1.2)
-    foto_vinc("kompakt_vinc.png", g, (3.45, 0, zb - 0.282), 1.10, capa=0.66, dikey=0.235,
-              arkasinda=("festoon", "bom_alt"), eksen=(1, 0, 0),
+    # duvar tipiyle aynı caraskal: 3B araba alt flanşta, 2 ton zincirli caraskal fotoğrafı askıda
+    z_aski = monoray_araba("araba", 3.45, zb - 0.30, 0.15, 0.022, M, g)
+    foto_vinc("zincirli_vinc_2ton.png", g, (3.45, 0, z_aski), 1.25, capa=0.60, dikey=0.0,
+              arkasinda=("festoon",), eksen=(1, 0, 0), kirp_ust=0.215,
               genislik_carpani=1 / math.cos(math.radians(SAPMA)))  # bomla aynı perspektif
     if not BEYAZ:
         palet(M, (4.4, -0.6, 0), 0.3)
@@ -1330,7 +1424,7 @@ def sahne_portal(M):
         yuk_kasa(M, (span * 0.47 - 0.15, -0.0, 0.0))
     if BEYAZ:
         # araba fotoğrafı gibi: kiriş doğrultusuna yakın (~20° yandan), ~9° yukarıdan
-        a = math.radians(25)
+        a = math.radians(PORTAL_SAPMA)  # araba fotoğrafının çekim açısı (kiriş doğrultusundan)
         d = 30.0
         kamera((span / 2 + d * math.cos(a), -d * math.sin(a), 7.8 + d * math.tan(math.radians(9))),
                (span / 2 + 3.6, 0, 3.4), lens=48, kaydir=True)
@@ -1343,7 +1437,7 @@ def sahne_yari_portal(M):
     ortam(M, arka_y=9.5, sol_x=-9.0)
     span = 11.0
     # sağda betonarme bina kolonları + yürüyüş yolu kirişi
-    beton = boya("beton_kolon", (0.36, 0.36, 0.345, 1), rough=0.85, var=0.1, bump=0.4)
+    beton = beton_dokusu()
     kx = span + 0.75
     KH = 9.5 if BEYAZ else 12
     for i, y in enumerate((-3.5, 3.5) if BEYAZ else (-12, -6, 0, 6, 12)):
@@ -1369,7 +1463,7 @@ def sahne_yari_portal(M):
     if not BEYAZ:
         yuk_kasa(M, (span * 0.47 - 0.15, 0.0, 0.0))
     if BEYAZ:
-        a = math.radians(25)
+        a = math.radians(PORTAL_SAPMA)  # araba fotoğrafının çekim açısı (kiriş doğrultusundan)
         d = 30.0
         kamera((span / 2 - d * math.cos(a), -d * math.sin(a), 8.9 + d * math.tan(math.radians(9))),
                (span / 2 - 1.2, 0, 4.0), lens=48, kaydir=True)
