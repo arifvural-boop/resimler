@@ -38,6 +38,18 @@ mercek kaydırmayla dik tutuldu. Arabaların tekerlekleri bom alt flanşına / k
 - Kolon grisi `#5A626B`
 - "beta" logosu: vinç gövdesinde, bom ve kiriş üzerinde beyaz plaka + koyu yazı
 
+## Teknik resimler (`teknik/`)
+
+A3 paftalar (ön görünüş, plan, kesit/detay, ölçüler, Beta antetli başlık kutusu):
+`duvar_pergel_teknik`, `kolon_pergel_teknik`, `yari_portal_teknik`, `portal_teknik` (PDF + PNG) ve
+hepsi tek dosyada `beta_vinc_teknik_resimler.pdf`. Ölçüler görselleştirme modelinden alınmıştır;
+imalat ve statik hesap için onaylı proje esas alınır.
+
+```bash
+./venv/bin/pip install matplotlib
+./venv/bin/python kaynak/teknik_resim.py teknik
+```
+
 ## Yeniden üretme
 
 ```bash
