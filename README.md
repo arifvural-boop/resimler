@@ -91,6 +91,9 @@ toplandı: `gercekci/festoon_kopru_vinc.png` (genel), `gercekci/festoon_detay.pn
 ./venv/bin/python kaynak/festoon_pafta.py gercekci/festoon_sistemi_pafta.png
 ```
 
+Vinçsiz bağımsız ürün görselleri: `gercekci/festoon_urun.png` (ray boyunca), `festoon_urun_yan.png` (önden),
+`festoon_urun_araba.png` (araba yakın plan) — `render_festoon.py urun | urun_yan | urun_araba`.
+
 ## Yeniden üretme
 
 ```bash
