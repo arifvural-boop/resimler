@@ -992,37 +992,57 @@ def sahne_duvar_pergel(M):
     # bina betonarme kolonu
     beton = boya("beton_kolon", (0.36, 0.36, 0.345, 1), rough=0.85, var=0.1, bump=0.4)
     kutu("bina_kolon", (0.6, 0.6, 12.0), (-0.3, 0, 6.0), beton, bevel=0.01)
-    # dönen grup (mafsal ekseni x=0.12)
+    zb = 4.30  # bom üst kotu (IPE 300)
+    z_alt, z_ust = zb - 0.16, 5.55  # mafsal kotları: alt = bom kökü, üst = gergi başı
+    XP = 0.22  # mafsal (pim) ekseni = dönme ekseni
+    # dönen grup: orijini pim ekseninde
     SAPMA, YUKSEKLIK = 10, 0  # zincirli vinç fotoğrafının çekim açısı (soldan, yukarıdan; derece)
-    g = bos("pergel", (0.12, 0, 0), (0, 0, math.radians(SAPMA if YAN else 18)))
-    # duvar konsolu (sabit)
-    # üstten gergili: alt mafsal bom kökünde, üst mafsal bomun 1,3 m üstünde (alt flanş caraskal için serbest)
+    g = bos("pergel", (XP, 0, 0), (0, 0, math.radians(SAPMA if YAN else 18)))
+    # --- duvar konsolu (sabit): taban levhası, her mafsalda alt/üst kulak levhaları + guse, dikey pim
     kutu("konsol_plaka", (0.03, 0.42, 2.0), (0.015, 0, 4.75), M["antrasit"], bevel=0.004)
-    for z in (4.0, 5.55):
-        kutu(f"konsol_kulak{z}", (0.22, 0.30, 0.14), (0.12, 0, z), M["antrasit"], bevel=0.01)
-        silindir(f"pim{z}", 0.04, 0.36, (0.16, 0, z), M["celik"])
-    for zz in (3.9, 4.35, 5.15, 5.6):
+    for zz in (3.85, 4.45, 5.25, 5.68):
         for yy in (-0.15, 0.15):
-            silindir(f"civata{zz}{yy}", 0.018, 0.04, (0.04, yy, zz), M["celik"], axis="X", seg=6)
-    # bom (IPE 300)
-    zb = 4.30
-    ipe("bom", 0.12, 4.2, zb, 0.30, 0.15, M["turuncu"], g, tf=0.022, tw=0.011)
-    kutu("bom_kok", (0.24, 0.26, 0.40), (0.14, 0, zb - 0.16), M["turuncu"], g, bevel=0.02)
-    kutu("bom_uc", (0.02, 0.22, 0.34), (4.21, 0, zb - 0.15), M["antrasit"], g, bevel=0.004)
+            civata(f"ankraj{zz}{yy}", (0.03, yy, zz), "X", M, None, r=0.018)
+    for z in (z_alt, z_ust):
+        for sz in (-1, 1):
+            zl = z + sz * 0.085
+            kutu(f"kulak{z}{sz}", (XP - 0.03, 0.20, 0.025), ((0.03 + XP) / 2, 0, zl), M["antrasit"], None, bevel=0.003)
+            silindir(f"kulak_uc{z}{sz}", 0.10, 0.025, (XP, 0, zl), M["antrasit"], None, seg=48, bevel=0.003)
+            # guse: kulağı duvar levhasına bağlar (kulağın dış yüzünde)
+            uye(f"kulak_guse{z}{sz}", (0.03, 0, zl + sz * 0.075), (XP - 0.02, 0, zl + sz * 0.018), 0.02, 0.02, 0.13, 0.012,
+                M["antrasit"], None, up=Vector((0, 1, 0)), bevel=0.002)
+        silindir(f"pim{z}", 0.035, 0.27, (XP, 0, z), M["celik"], None, seg=32)
+        silindir(f"pim_pul{z}", 0.05, 0.012, (XP, 0, z + 0.104), M["celik"], None, seg=32)
+        silindir(f"pim_somun{z}", 0.045, 0.03, (XP, 0, z + 0.125), M["celik"], None, seg=6)
+        silindir(f"pim_bas{z}", 0.05, 0.02, (XP, 0, z - 0.107), M["celik"], None, seg=32)
+    # --- bom (dönen): kök göbeği pimin etrafında, guselerle bom alın levhasına
+    x0 = 0.11  # bom alın levhası (yerel)
+    silindir("kok_gobek", 0.058, 0.14, (0, 0, z_alt), M["turuncu"], g, seg=48, bevel=0.004)
+    for sy in (-1, 1):
+        kutu(f"kok_guse{sy}", (x0 - 0.03, 0.02, 0.30), ((x0 + 0.03) / 2, sy * 0.045, zb - 0.15), M["turuncu"], g, bevel=0.003)
+    kutu("bom_alin", (0.025, 0.22, 0.34), (x0, 0, zb - 0.15), M["turuncu"], g, bevel=0.003)
+    civata_izgara("bom_alin_c", (x0 + 0.016, 0, zb - 0.15), (0, 1, 0), (0, 0, 1), 2, 3, 0.15, 0.11, "X", M, g, r=0.012)
+    ipe("bom", x0 + 0.012, 4.3, zb, 0.30, 0.15, M["turuncu"], g, tf=0.022, tw=0.011)
+    kutu("bom_uc", (0.02, 0.22, 0.34), (4.31, 0, zb - 0.15), M["antrasit"], g, bevel=0.004)
     bom_logo(M, g, 1.25, zb)
     for sy in (-1, 1):
-        kutu(f"stoper{sy}", (0.05, 0.03, 0.06), (4.12, sy * 0.06, zb - 0.33), M["siyah"], g, bevel=0.01)
-    # gergi: üst mafsaldan bomun üst flanşındaki kulağa
+        kutu(f"stoper{sy}", (0.05, 0.03, 0.06), (4.22, sy * 0.06, zb - 0.33), M["siyah"], g, bevel=0.01)
+    # --- gergi: üst göbek (pim etrafında) + çatal, gerdirme, bom üst flanşındaki kulak
     xg = 3.45
-    boru("gergi", (0.18, 0, 5.55), (xg, 0, zb + 0.10), 0.042, M["turuncu"], g)
+    silindir("gergi_gobek", 0.05, 0.14, (0, 0, z_ust), M["turuncu"], g, seg=48, bevel=0.004)
+    p0 = Vector((0.06, 0, z_ust - 0.01))
+    p1 = Vector((xg, 0, zb + 0.10))
+    aci = math.atan2(p0.z - p1.z, p1.x - p0.x)
+    kutu("gergi_bas_catal", (0.16, 0.07, 0.06), (0.07, 0, z_ust - 0.005), M["turuncu"], g, bevel=0.008, rot=(0, aci, 0))
+    boru("gergi", p0, p1, 0.042, M["turuncu"], g)
+    pg = p0 + (p1 - p0) * 0.42
+    kutu("gergi_gerdirme", (0.22, 0.09, 0.09), tuple(pg), M["antrasit"], g, bevel=0.01, rot=(0, aci, 0))
     kutu("gergi_bom_kulak", (0.18, 0.03, 0.14), (xg, 0, zb + 0.07), M["antrasit"], g, bevel=0.006)
     silindir("gergi_bom_pim", 0.022, 0.12, (xg, 0, zb + 0.10), M["celik"], g, axis="Y")
-    kutu("gergi_catal", (0.14, 0.09, 0.07), (xg - 0.08, 0, zb + 0.14), M["antrasit"], g, bevel=0.01, rot=(0, math.radians(20), 0))
-    kutu("gergi_gerdirme", (0.22, 0.09, 0.09), (1.6, 0, 5.55 - (5.55 - zb - 0.1) * (1.42 / 3.27)), M["antrasit"], g, bevel=0.01,
-         rot=(0, math.atan2(5.55 - zb - 0.1, 3.27), 0))
-    civata_izgara("bom_kok_c", (0.14, -0.132, zb - 0.16), (1, 0, 0), (0, 0, 1), 2, 3, 0.12, 0.11, "-Y", M, g, r=0.013)
-    festoon("festoon", 0.3, 4.1, -0.27, zb + 0.07, 0.4, 3.25 - 0.42, M, g, n=5, L=1.1,
-            y_konsol=-0.07, z_konsol=zb, aralik=1.2)
+    kutu("gergi_uc_catal", (0.14, 0.09, 0.07), (xg - 0.08, 0, zb + 0.13), M["antrasit"], g, bevel=0.01, rot=(0, aci, 0))
+    # festoon bomun yanında, üst flanşın altında (bom üstü gergi kulağına serbest)
+    festoon("festoon", 0.3, 4.1, -0.23, zb - 0.09, 0.4, 3.25 - 0.42, M, g, n=5, L=1.1,
+            y_konsol=-0.02, z_konsol=zb - 0.022, aralik=1.2)
     # caraskal arabası 3B: tekerlekler bomun alt flanşında (ray); caraskal gövdesi ürün fotoğrafı, askıya asılı
     z_askı = monoray_araba("araba", 3.25, zb - 0.30, 0.15, 0.022, M, g)
     foto_vinc("zincirli_vinc_2ton.png", g, (3.25, 0, z_askı), 1.25, capa=0.60, dikey=0.0,
@@ -1086,8 +1106,8 @@ def sahne_kolon_pergel(M):
     for i in range(10):
         a_ = i * 2 * math.pi / 10
         civata(f"bilezik_c{i}", (0.192 * math.cos(a_), 0.192 * math.sin(a_), H + 0.14), "Z", M, None, r=0.012)
-    festoon("festoon", 0.35, 4.3, -0.27, zb + 0.07, 0.45, 3.45 - 0.45, M, g, n=5, L=1.1,
-            y_konsol=-0.07, z_konsol=zb, aralik=1.2)
+    festoon("festoon", 0.35, 4.3, -0.23, zb - 0.09, 0.45, 3.45 - 0.45, M, g, n=5, L=1.1,
+            y_konsol=-0.02, z_konsol=zb - 0.022, aralik=1.2)
     foto_vinc("kompakt_vinc.png", g, (3.45, 0, zb - 0.282), 1.10, capa=0.66, dikey=0.235,
               arkasinda=("festoon", "bom_alt"), eksen=(1, 0, 0),
               genislik_carpani=1 / math.cos(math.radians(SAPMA)))  # bomla aynı perspektif
