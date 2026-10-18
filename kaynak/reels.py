@@ -2,7 +2,7 @@
 Beta Vinç - Instagram Reels: "30 saniyede bir vincin yolculuğu" (2B motion graphics, 1080x1920, 9:16).
 
 Kullanım:
-    python reels.py <dil: tr|en> <cikti.mp4> [--sessiz]
+    python reels.py <dil: tr|en|iki> <cikti.mp4> [--sessiz]   (iki = Türkçe + İngilizce tek video)
     python reels.py <dil> --kare <sn> <cikti.png>
 """
 import math
@@ -69,6 +69,21 @@ T = {
 }
 
 
+tr, en = T["tr"], T["en"]
+T["iki"] = dict(
+    iki=True,
+    kanca1="SİPARİŞTEN", kanca2="KURULUMA", kanca3="Bir vinç nasıl doğar?", kanca3_en="How is a crane born?",
+    b1=tr["b1"], e1=en["b1"], b2=tr["b2"], e2=en["b2"], b3=tr["b3"], e3=en["b3"],
+    b4=tr["b4"], e4=en["b4"], b5=tr["b5"], e5=en["b5"], b6=tr["b6"], e6=en["b6"], b7=tr["b7"], e7=en["b7"],
+    s1=tr["s1"], s2=tr["s2"], s3=tr["s3"], s4="Beta Üretim Merkezi · Production Center", s5=tr["s5"], s6=tr["s6"], s7=tr["s7"],
+    chat1=tr["chat1"], chat1_en=en["chat1"], chat2=tr["chat2"], chat2_en=en["chat2"],
+    onay="ONAYLANDI · APPROVED", tamam="TESLİM · DELIVERED", km="km",
+    son1="Sıradaki proje sizin.", son2="Your project is next.", cta="Takip et · Follow   betavinc.com",
+    slogan="vinç sistemleri", slogan_en="crane systems", adim="ADIM · STEP",
+)
+T["iki"]["etiketler"] = [("kapasite", "capacity"), ("açıklık", "span"), ("kaldırma", "lift")]
+
+
 def png(ad):
     return cairo.ImageSurface.create_from_png(os.path.join(LOGO, ad))
 
@@ -129,15 +144,21 @@ def kelime_pop(ctx, metin, x, y, boy, t0, t, renk=C["beyaz"], vurgu=None, hiza="
 def ust_bant(ctx, L, no, t):
     """Üstte adım çipi + ilerleme çizgisi (Reels güvenli alanı içinde)."""
     a = dilim(t, 0.0, 0.2)
-    kutu(ctx, 70, 170, 210, 64, C["turuncu"], r=32, a=a)
-    yazi(ctx, f"{L['adim']} {no}/7", 175, 213, 30, C["koyu"], kalin=True, hiza="orta", a=a)
-    kutu(ctx, 300, 198, 650, 8, C["beyaz"], r=4, a=0.35 * a)
-    kutu(ctx, 300, 198, 650 * (no - 1 + sinir(t / 2.6)) / 7, 8, C["turuncu"], r=4, a=a)
+    cw = 330 if L.get("iki") else 210
+    kutu(ctx, 70, 170, cw, 64, C["turuncu"], r=32, a=a)
+    yazi(ctx, f"{L['adim']} {no}/7", 70 + cw / 2, 213, 30, C["koyu"], kalin=True, hiza="orta", a=a)
+    x0 = 90 + cw
+    kutu(ctx, x0, 198, 950 - x0, 8, C["beyaz"], r=4, a=0.35 * a)
+    kutu(ctx, x0, 198, (950 - x0) * (no - 1 + sinir(t / 2.6)) / 7, 8, C["turuncu"], r=4, a=a)
     resim(ctx, LOGO_B, 70, 104, 150, a=0.95)
 
 
-def baslik(ctx, L, metin, alt, t, koyu=False, y=420):
+def baslik(ctx, L, metin, alt, t, koyu=False, y=420, en=None):
     c = C["koyu"] if koyu else C["beyaz"]
+    if L.get("iki") and en:
+        kelime_pop(ctx, metin, W / 2, y - 20, 100, 0.05, t, renk=c)
+        kelime_pop(ctx, en, W / 2, y + 52, 58, 0.3, t, renk=C["turuncu"] if not koyu else C["antrasit"], aralik=0.06)
+        return
     kelime_pop(ctx, metin, W / 2, y, 104, 0.05, t, renk=c)
     yazi(ctx, alt, W / 2, y + 74, 40, C["turuncu"] if not koyu else C["antrasit"], kalin=True, hiza="orta",
          a=dilim(t, 0.35, 0.6))
@@ -187,12 +208,15 @@ def s_kanca(ctx, L, t):
         ctx.restore()
     ctx.restore()
     a = dilim(t, 1.0, 1.3)
-    yazi(ctx, L["kanca3"], W / 2, 1090, 46, C["gri_a"], hiza="orta", a=a)
+    yazi(ctx, L["kanca3"], W / 2, 1090, 50 if L.get("iki") else 46, C["beyaz"] if L.get("iki") else C["gri_a"],
+         kalin=bool(L.get("iki")), hiza="orta", a=a)
+    if L.get("iki"):
+        yazi(ctx, L["kanca3_en"], W / 2, 1150, 42, C["turuncu"], kalin=True, hiza="orta", a=dilim(t, 1.15, 1.45))
     # 30 sn sayacı
     p = dilim(t, 1.2, 1.5)
     if p > 0:
         r = 92
-        cx, cy = W / 2, 1330
+        cx, cy = W / 2, 1380
         daire(ctx, cx, cy, r * geri(p), C["koyu"])
         ctx.arc(cx, cy, r - 10, -math.pi / 2, -math.pi / 2 + 2 * math.pi * sinir((t - 1.2) / 1.3))
         a2.boya(ctx, C["turuncu"])
@@ -212,7 +236,7 @@ def renk_acik():
     return a2.renk("#F2EFEA")
 
 
-def balon(ctx, metin, x, y, gen, sag, t, t0, boy=34):
+def balon(ctx, metin, x, y, gen, sag, t, t0, boy=34, metin2=None):
     p = eo(dilim(t, t0, t0 + 0.25))
     if p <= 0:
         return y
@@ -227,20 +251,35 @@ def balon(ctx, metin, x, y, gen, sag, t, t0, boy=34):
         else:
             satir = dene
     satirlar.append(satir)
-    h = 34 + len(satirlar) * (boy * 1.3)
+    satirlar2 = []
+    if metin2:
+        ctx.set_font_size(boy * 0.78)
+        satir = ""
+        for k in metin2.split(" "):
+            dene = (satir + " " + k).strip()
+            if ctx.text_extents(dene).x_advance > gen - 60:
+                satirlar2.append(satir)
+                satir = k
+            else:
+                satir = dene
+        satirlar2.append(satir)
+    h = 34 + len(satirlar) * (boy * 1.3) + len(satirlar2) * (boy * 1.02) + (12 if satirlar2 else 0)
     bx = x + (0 if not sag else 0)
     ctx.save()
     ctx.translate(0, (1 - p) * 40)
     kutu(ctx, bx, y, gen, h, C["turuncu"] if sag else C["beyaz"], r=30, a=p)
     for i, s in enumerate(satirlar):
         yazi(ctx, s, bx + 30, y + 22 + boy + i * boy * 1.3, boy, C["koyu"], a=p)
+    y2 = y + 22 + boy + len(satirlar) * boy * 1.3 + 4
+    for i, s in enumerate(satirlar2):
+        yazi(ctx, s, bx + 30, y2 + i * boy * 1.02, boy * 0.78, C["antrasit"] if sag else C["gri"], a=p)
     ctx.restore()
     return y + h + 26
 
 
 def s_siparis(ctx, L, t):
     koyu_zemin(ctx, a2.renk("#2B3036"), C["koyu"])
-    baslik(ctx, L, L["b1"], L["s1"], t)
+    baslik(ctx, L, L["b1"], L["s1"], t, en=L.get("e1"))
     px, py, pw, ph = 190, 600, 700, 1060
     ctx.save()
     ctx.translate(0, (1 - eo(dilim(t, 0.0, 0.35))) * 900)
@@ -249,33 +288,39 @@ def s_siparis(ctx, L, t):
     resim(ctx, LOGO_B, px + 40, py + 98, 150)
     daire(ctx, px + pw - 60, py + 125, 14, C["yesil"])
     y = py + 220
-    y = balon(ctx, L["chat1"], px + 30, y, 560, False, t, 0.45)
-    y = balon(ctx, L["chat2"], px + 110, y, 560, True, t, 1.15)
+    y = balon(ctx, L["chat1"], px + 30, y, 580, False, t, 0.45, boy=30 if L.get("iki") else 34, metin2=L.get("chat1_en"))
+    y = balon(ctx, L["chat2"], px + 90, y, 580, True, t, 1.15, boy=30 if L.get("iki") else 34, metin2=L.get("chat2_en"))
     # sipariş kartı + damga
     p = eo(dilim(t, 1.7, 2.0))
     if p > 0:
         kutu(ctx, px + 40, y, pw - 80, 250, C["beyaz"], r=24, a=p)
         for k, v in enumerate(("5 t", "12 m", "6 m")):
             yazi(ctx, v, px + 140 + k * 210, y + 120, 76, C["koyu"], kalin=True, hiza="orta", a=p)
-        for i, et in enumerate(("kapasite" if L is T["tr"] else "capacity", "açıklık" if L is T["tr"] else "span",
-                                "kaldırma" if L is T["tr"] else "lift")):
-            yazi(ctx, et, px + 140 + i * 210, y + 170, 26, C["gri"], hiza="orta", a=p)
+        if L.get("iki"):
+            for i, (a_, b_) in enumerate(L["etiketler"]):
+                yazi(ctx, a_, px + 140 + i * 210, y + 160, 24, C["gri"], hiza="orta", a=p)
+                yazi(ctx, b_, px + 140 + i * 210, y + 186, 20, C["turuncu_k"], hiza="orta", a=p)
+        else:
+            ets = ("kapasite", "açıklık", "kaldırma") if L is T["tr"] else ("capacity", "span", "lift")
+            for i, et in enumerate(ets):
+                yazi(ctx, et, px + 140 + i * 210, y + 170, 26, C["gri"], hiza="orta", a=p)
         d = dilim(t, 2.15, 2.4)
         if d > 0:
             s = lerp(2.6, 1.0, eo(d))
             ctx.save()
-            ctx.translate(px + pw / 2, y + 215)
+            ctx.translate(px + pw / 2, y + 310)
             ctx.rotate(-0.12)
             ctx.scale(s, s)
-            kutu(ctx, -200, -46, 400, 82, a2.renk("#FFFFFF", 0.9), r=12, cizgi=C["yesil"], lw=7)
-            yazi(ctx, L["onay"], 0, 14, 48, C["yesil"], kalin=True, hiza="orta", a=sinir(d * 2))
+            ow = 600 if L.get("iki") else 400
+            kutu(ctx, -ow / 2, -46, ow, 82, a2.renk("#FFFFFF", 0.9), r=12, cizgi=C["yesil"], lw=7)
+            yazi(ctx, L["onay"], 0, 14, 40 if L.get("iki") else 48, C["yesil"], kalin=True, hiza="orta", a=sinir(d * 2))
             ctx.restore()
     ctx.restore()
     ust_bant(ctx, L, 1, t)
 
 
 def mm(L, v):
-    return f"{v:,}".replace(",", ".") if L is T["tr"] else f"{v:,}"
+    return f"{v:,}".replace(",", ".") if L is not T["en"] else f"{v:,}"
 
 
 def s_olcu(ctx, L, t):
@@ -313,7 +358,7 @@ def s_olcu(ctx, L, t):
         yazi(ctx, f"{mm(L, int(6500 * p2))} mm", hx + 152, 1230, 44, C["kirmizi"], kalin=True, hiza="orta")
     if t > 2.4:
         a2.onay(ctx, W / 2, 1790, 48, dilim(t, 2.4, 2.9))
-    baslik(ctx, L, L["b2"], L["s2"], t)
+    baslik(ctx, L, L["b2"], L["s2"], t, en=L.get("e2"))
     ust_bant(ctx, L, 2, t)
 
 
@@ -361,7 +406,7 @@ def s_tasarim(ctx, L, t):
     parca([(cx - 18, 1300), (cx + 18, 1300), (cx + 18, 1326), (cx - 18, 1326), (cx - 18, 1300)], 1.4, 1.6, 3)
     # ölçüler
     if t > 1.3:
-        a2.olcu_cizgisi(ctx, (xl, 690), (xr, 690), "12.000" if L is T["tr"] else "12,000", c=sari,
+        a2.olcu_cizgisi(ctx, (xl, 690), (xr, 690), "12.000" if L is not T["en"] else "12,000", c=sari,
                         ilerle=dilim(t, 1.3, 1.7), ofs=-24, zemin=a2.renk("#0F2740"))
     if t > 1.5:
         a2.olcu_cizgisi(ctx, (1000, zemin), (1000, lerp(zemin, yr, dilim(t, 1.5, 1.9))), None, c=sari)
@@ -369,12 +414,12 @@ def s_tasarim(ctx, L, t):
         ctx.save()
         ctx.translate(1040, (zemin + yr) / 2)
         ctx.rotate(-math.pi / 2)
-        yazi(ctx, "6.500" if L is T["tr"] else "6,500", 0, 0, 34, sari, kalin=True, hiza="orta", a=a)
+        yazi(ctx, "6.500" if L is not T["en"] else "6,500", 0, 0, 34, sari, kalin=True, hiza="orta", a=a)
         ctx.restore()
         yazi(ctx, "5 t", cx + 50, 1290, 40, sari, kalin=True, a=a)
     if t > 1.9:
         a2.onay(ctx, W / 2, 1760, 46, dilim(t, 1.9, 2.4))
-    baslik(ctx, L, L["b3"], L["s3"], t)
+    baslik(ctx, L, L["b3"], L["s3"], t, en=L.get("e3"))
     ust_bant(ctx, L, 3, t)
 
 
@@ -382,8 +427,13 @@ def s_imalat(ctx, L, t):
     i = 0 if t < 2.0 else 1 if t < 3.8 else 2
     t_alt = t - (0, 2.0, 3.8)[i]
     koyu_zemin(ctx, a2.renk("#33383F"), C["koyu"])
-    kelime_pop(ctx, L["b4"][i], W / 2, 420, 120, 0.02, t_alt, renk=C["beyaz"])
-    yazi(ctx, L["s4"], W / 2, 500, 40, C["turuncu"], kalin=True, hiza="orta")
+    if L.get("iki"):
+        kelime_pop(ctx, L["b4"][i], W / 2, 400, 116, 0.02, t_alt, renk=C["beyaz"])
+        kelime_pop(ctx, L["e4"][i], W / 2, 476, 60, 0.15, t_alt, renk=C["turuncu"])
+        yazi(ctx, L["s4"], W / 2, 540, 30, C["gri_a"], kalin=True, hiza="orta")
+    else:
+        kelime_pop(ctx, L["b4"][i], W / 2, 420, 120, 0.02, t_alt, renk=C["beyaz"])
+        yazi(ctx, L["s4"], W / 2, 500, 40, C["turuncu"], kalin=True, hiza="orta")
     gx0, gx1, gy = 90, 990, 1000
     # kiriş (büyük, yakın plan)
     ham = a2.renk("#9AA0A8")
@@ -455,7 +505,7 @@ def s_yukleme(ctx, L, t):
             a2.gradyan_kutu(c, gx, ly - 54, 760, 54, C["turuncu_a"], C["turuncu_k"])
             kutu(c, gx, ly - 60, 760, 8, C["antrasit"])
     koyu_zemin(ctx, a2.renk("#2B3036"), C["koyu"])
-    baslik(ctx, L, L["b5"], L["s5"], t)
+    baslik(ctx, L, L["b5"], L["s5"], t, en=L.get("e5"))
     dx, dy = sarsinti(t, [2.5], guc=12)
     dunya(ctx, 0.62, W / 2 + 60 + dx, 1150 + dy, ciz)
     if t > 2.5:
@@ -487,7 +537,7 @@ def s_yol(ctx, L, t):
         cizgi(ctx, [(x, y), (x + rnd.uniform(80, 200), y)], C["beyaz"], lw=4, a=0.6)
     zipla = math.sin(t * 24) * 2
     dunya(ctx, 0.72, W / 2 + 120, 1150 + zipla, lambda c: a2.tir(c, 1500, a2.ZEMIN, teker=t * 18, yuk=a2.kiris_yuk()))
-    baslik(ctx, L, L["b6"], L["s6"], t, koyu=True)
+    baslik(ctx, L, L["b6"], L["s6"], t, koyu=True, en=L.get("e6"))
     km = int(350 * eio(dilim(t, 0.2, 2.6)))
     kutu(ctx, W / 2 - 230, 660, 460, 150, C["koyu"], r=26, a=0.9)
     yazi(ctx, f"{km} {L['km']}", W / 2, 765, 92, C["turuncu"], kalin=True, hiza="orta")
@@ -553,15 +603,16 @@ def s_kurulum(ctx, L, t):
                 for d in (-30, 0, 30):
                     daire(ctx, xb + d, hedef + 64, 10 * math.sin(pb * math.pi), a2.renk("#FFF3C4"), a=0.9)
     ctx.restore()
-    baslik(ctx, L, L["b7"], L["s7"], t)
+    baslik(ctx, L, L["b7"], L["s7"], t, en=L.get("e7"))
     p = geri(dilim(t, 4.3, 4.6))
     if p > 0:
         ctx.save()
         ctx.translate(W / 2, 1790)
         ctx.scale(p, p)
         ctx.rotate(-0.08)
-        kutu(ctx, -230, -60, 460, 110, C["yesil"], r=20)
-        yazi(ctx, L["tamam"], 0, 18, 58, C["beyaz"], kalin=True, hiza="orta")
+        tw = 680 if L.get("iki") else 460
+        kutu(ctx, -tw / 2, -60, tw, 110, C["yesil"], r=20)
+        yazi(ctx, L["tamam"], 0, 18, 50 if L.get("iki") else 58, C["beyaz"], kalin=True, hiza="orta")
         ctx.restore()
     ust_bant(ctx, L, 7, t)
 
@@ -576,10 +627,15 @@ def s_kapanis(ctx, L, t):
         resim(ctx, LOGO_B, 0, 0, 760, orta=True)
         ctx.restore()
     yazi(ctx, L["slogan"], W / 2, 790, 50, C["beyaz"], hiza="orta", a=dilim(t, 0.3, 0.6), aralik=14)
-    kelime_pop(ctx, L["son1"], W / 2, 1060, 96, 0.6, t, renk=C["koyu"])
-    kelime_pop(ctx, L["son2"], W / 2, 1180, 96, 0.8, t, renk=C["beyaz"], vurgu={0, 1})
+    if L.get("iki"):
+        yazi(ctx, L["slogan_en"], W / 2, 850, 34, C["koyu"], hiza="orta", a=dilim(t, 0.4, 0.7), aralik=10)
+        kelime_pop(ctx, L["son1"], W / 2, 1070, 84, 0.6, t, renk=C["koyu"])
+        kelime_pop(ctx, L["son2"], W / 2, 1180, 72, 0.85, t, renk=C["beyaz"])
+    else:
+        kelime_pop(ctx, L["son1"], W / 2, 1060, 96, 0.6, t, renk=C["koyu"])
+        kelime_pop(ctx, L["son2"], W / 2, 1180, 96, 0.8, t, renk=C["beyaz"], vurgu={0, 1})
     p = eo(dilim(t, 1.2, 1.5))
-    kutu(ctx, W / 2 - 360, 1330, 720, 110, C["koyu"], r=55, a=p)
+    kutu(ctx, W / 2 - 400, 1330, 800, 110, C["koyu"], r=55, a=p)
     yazi(ctx, L["cta"], W / 2, 1402, 42, C["beyaz"], kalin=True, hiza="orta", a=p)
 
 
