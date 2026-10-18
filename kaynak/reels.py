@@ -274,29 +274,46 @@ def s_siparis(ctx, L, t):
     ust_bant(ctx, L, 1, t)
 
 
+def mm(L, v):
+    return f"{v:,}".replace(",", ".") if L is T["tr"] else f"{v:,}"
+
+
 def s_olcu(ctx, L, t):
-    def ciz(c):
-        a2.hol(c, 360, 1560, 400, [300, 1620])
-        a2.insan(c, 520, a2.ZEMIN, boy=190, kol=-0.55)
-        p = eio(dilim(t, 0.4, 1.7))
-        cizgi(c, [(420, 417), (lerp(420, 1500, p), 417)], C["kirmizi"], lw=5)
-        daire(c, lerp(420, 1500, p), 417, 9, C["kirmizi"])
+    xl, xr, yr, zemin = 175, 905, 860, 1620
     koyu_zemin(ctx, a2.renk("#2B3036"), C["koyu"])
-    baslik(ctx, L, L["b2"], L["s2"], t)
-    dunya(ctx, 0.9, W / 2 + 40, 1180, ciz)
-    p = eio(dilim(t, 0.4, 1.7))
-    deger = int(12000 * p)
-    metin = f"{deger:,}".replace(",", ".") if L is T["tr"] else f"{deger:,}"
-    dx, dy = sarsinti(t, [1.7])
-    s = 1 + 0.12 * math.exp(-max(0, t - 1.7) * 12) * (t >= 1.7)
+    dikey_hol(ctx, xl, xr, yr, zemin)
+    # teknisyen yürüyerek gelir, lazer metreyle ölçer
+    w = eo(dilim(t, 0.0, 0.5))
+    tx = lerp(-80, 300, w)
+    el = a2.insan(ctx, tx, zemin, boy=230, kol=-0.9 if w >= 1 else 0.2, adim=t * 10 if w < 1 else 0)
+    if w >= 1:
+        kutu(ctx, el[0] - 12, el[1] - 16, 36, 26, C["turuncu"], r=5)
+    p = eio(dilim(t, 0.5, 1.6))
+    # açıklık: ray ekseninden ray eksenine
+    ax, bx, ly = xl, xr, yr + 17
+    if p > 0:
+        cizgi(ctx, [(ax, ly), (lerp(ax, bx, p), ly)], C["kirmizi"], lw=5)
+        daire(ctx, lerp(ax, bx, p), ly, 10, C["kirmizi"])
+        a2.olcu_cizgisi(ctx, (ax, 720), (lerp(ax, bx, p), 720), None, ilerle=1.0)
+    dx, dy = sarsinti(t, [1.6])
+    s = 1 + 0.12 * math.exp(-max(0, t - 1.6) * 12) * (t >= 1.6)
     ctx.save()
-    ctx.translate(W / 2 + dx, 760 + dy)
+    ctx.translate(W / 2 + dx, 650 + dy)
     ctx.scale(s, s)
-    kutu(ctx, -330, -100, 660, 140, C["beyaz"], r=24, a=0.95 * dilim(t, 0.3, 0.5))
-    yazi(ctx, f"{metin} mm", 0, 6, 104, C["kirmizi"], kalin=True, hiza="orta", a=dilim(t, 0.3, 0.5))
+    a = dilim(t, 0.4, 0.6)
+    kutu(ctx, -300, -84, 600, 116, C["beyaz"], r=22, a=0.96 * a)
+    yazi(ctx, f"{mm(L, int(12000 * p))} mm", 0, 6, 86, C["kirmizi"], kalin=True, hiza="orta", a=a)
     ctx.restore()
-    if t > 1.8:
-        a2.onay(ctx, W / 2, 1560, 48, dilim(t, 1.8, 2.3))
+    # ray kotu: zeminden ray üstüne
+    p2 = eio(dilim(t, 1.7, 2.4))
+    if p2 > 0:
+        hx = 700
+        a2.olcu_cizgisi(ctx, (hx, zemin), (hx, lerp(zemin, yr, p2)), None)
+        kutu(ctx, hx + 22, 1180, 260, 70, C["beyaz"], r=14, a=0.96)
+        yazi(ctx, f"{mm(L, int(6500 * p2))} mm", hx + 152, 1230, 44, C["kirmizi"], kalin=True, hiza="orta")
+    if t > 2.4:
+        a2.onay(ctx, W / 2, 1790, 48, dilim(t, 2.4, 2.9))
+    baslik(ctx, L, L["b2"], L["s2"], t)
     ust_bant(ctx, L, 2, t)
 
 
@@ -306,38 +323,58 @@ def s_tasarim(ctx, L, t):
         cizgi(ctx, [(i, 0), (i, H)], C["beyaz"], lw=1, a=0.07)
     for j in range(0, H, 45):
         cizgi(ctx, [(0, j), (W, j)], C["beyaz"], lw=1, a=0.07)
-    baslik(ctx, L, L["b3"], L["s3"], t)
     mavi = a2.renk("#DDEBFA")
+    sari = a2.renk("#FFD36B")
 
-    def parca(pts, a0, a1, lw=5):
+    def parca(pts, a0, a1, lw=5, c=mavi):
         p = eio(dilim(t, a0, a1))
         if p <= 0:
             return
         Ls = [math.dist(pts[i], pts[i + 1]) for i in range(len(pts) - 1)]
         d = p * sum(Ls)
         q = [pts[0]]
-        for i, s in enumerate(Ls):
-            if d >= s:
+        for i, s_ in enumerate(Ls):
+            if d >= s_:
                 q.append(pts[i + 1])
-                d -= s
+                d -= s_
             else:
-                q.append((lerp(pts[i][0], pts[i + 1][0], d / s), lerp(pts[i][1], pts[i + 1][1], d / s)))
+                q.append((lerp(pts[i][0], pts[i + 1][0], d / s_), lerp(pts[i][1], pts[i + 1][1], d / s_)))
                 break
-        cizgi(ctx, q, mavi, lw=lw)
-    x0, x1, yk = 120, 960, 900
-    parca([(x0, yk), (x1, yk), (x1, yk + 70), (x0, yk + 70), (x0, yk)], 0.2, 0.9)
-    for xb in (x0 + 40, x1 - 40):
-        parca([(xb - 70, yk + 70), (xb + 70, yk + 70), (xb + 70, yk + 120), (xb - 70, yk + 120), (xb - 70, yk + 70)], 0.6, 1.1, 4)
-    parca([(500, yk + 70), (580, yk + 70), (580, yk + 160), (500, yk + 160), (500, yk + 70)], 0.9, 1.3, 4)
-    parca([(540, yk + 160), (540, yk + 420)], 1.2, 1.5, 3)
-    parca([(x0 - 40, yk + 140), (x0 - 40, 1500)], 0.9, 1.4, 4)
-    parca([(x1 + 40, yk + 140), (x1 + 40, 1500)], 0.9, 1.4, 4)
-    if t > 1.4:
-        a2.olcu_cizgisi(ctx, (x0 + 40, yk - 90), (x1 - 40, yk - 90), "12.000" if L is T["tr"] else "12,000",
-                        c=a2.renk("#FFD36B"), ilerle=dilim(t, 1.4, 1.8), ofs=-24, zemin=a2.renk("#0F2740"))
-    # dönen dişli / onay
-    if t > 1.8:
-        a2.onay(ctx, W / 2, 1620, 44, dilim(t, 1.8, 2.3))
+        cizgi(ctx, q, c, lw=lw)
+
+    def kutu_p(x0, y0, x1, y1, a0, a1, lw=4):
+        parca([(x0, y0), (x1, y0), (x1, y1), (x0, y1), (x0, y0)], a0, a1, lw)
+
+    xl, xr, yr, zemin = 175, 905, 860, 1600
+    yk = yr - 92
+    # zemin ve kolonlar
+    parca([(60, zemin), (1020, zemin)], 0.1, 0.5, 3)
+    for xk in (xl - 70, xr + 70):
+        kutu_p(xk - 30, 640, xk + 30, zemin, 0.2, 0.9, 3)
+    # kiriş, baş arabaları, caraskal, kanca
+    kutu_p(xl - 35, yk, xr + 35, yk + 54, 0.4, 1.0, 5)
+    for xb in (xl, xr):
+        kutu_p(xb - 70, yk + 44, xb + 70, yk + 84, 0.8, 1.2, 4)
+    cx = W / 2
+    kutu_p(cx - 58, yk + 72, cx + 58, yk + 126, 1.0, 1.3, 4)
+    parca([(cx, yk + 126), (cx, 1300)], 1.2, 1.5, 3)
+    parca([(cx - 18, 1300), (cx + 18, 1300), (cx + 18, 1326), (cx - 18, 1326), (cx - 18, 1300)], 1.4, 1.6, 3)
+    # ölçüler
+    if t > 1.3:
+        a2.olcu_cizgisi(ctx, (xl, 690), (xr, 690), "12.000" if L is T["tr"] else "12,000", c=sari,
+                        ilerle=dilim(t, 1.3, 1.7), ofs=-24, zemin=a2.renk("#0F2740"))
+    if t > 1.5:
+        a2.olcu_cizgisi(ctx, (1000, zemin), (1000, lerp(zemin, yr, dilim(t, 1.5, 1.9))), None, c=sari)
+        a = dilim(t, 1.7, 1.9)
+        ctx.save()
+        ctx.translate(1040, (zemin + yr) / 2)
+        ctx.rotate(-math.pi / 2)
+        yazi(ctx, "6.500" if L is T["tr"] else "6,500", 0, 0, 34, sari, kalin=True, hiza="orta", a=a)
+        ctx.restore()
+        yazi(ctx, "5 t", cx + 50, 1290, 40, sari, kalin=True, a=a)
+    if t > 1.9:
+        a2.onay(ctx, W / 2, 1760, 46, dilim(t, 1.9, 2.4))
+    baslik(ctx, L, L["b3"], L["s3"], t)
     ust_bant(ctx, L, 3, t)
 
 
