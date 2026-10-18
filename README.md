@@ -62,6 +62,16 @@ Beta kurumsal renkleri ve logosuyla 2B flat motion graphics. Sahneler: açılı�
 ./venv/bin/python kaynak/animasyon.py --kare 30 onizleme.png   # tek kare
 ```
 
+## Instagram Reels (`video/beta_reels_tr.mp4`, `video/beta_reels_en.mp4`)
+
+"30 saniyede bir vincin yolculuğu": 1080×1920 (9:16), 30 fps, 30 sn, 2B motion graphics, gerçek Beta logosu,
+120 BPM'e oturan kesmeler ve telifsiz üretilmiş müzik. Türkçe ve İngilizce sürüm.
+
+```bash
+./venv/bin/python kaynak/reels.py tr video/beta_reels_tr.mp4
+./venv/bin/python kaynak/reels.py en video/beta_reels_en.mp4
+```
+
 ## Yeniden üretme
 
 ```bash

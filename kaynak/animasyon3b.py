@@ -700,10 +700,10 @@ def s_sevkiyat(M, sc, n):
     fabrika_cephe(M)
     gunes((50, 0, -30), 2.2)
     t = tir3b("tir", M)
-    t.location = (8.0, -2.0, 0)
-    # kiriş yerde (sol), mobil vinç ortada
-    mv, dn, bom, uc = mobil_vinc3b("mvinc", (-6.0, 4.0, 0), M, bom_uzun=15.0, bom_aci=48, don=-60)
-    anahtar(dn, ("rotation_euler", 2), [(int(n * 0.35), math.radians(-60)), (int(n * 0.68), math.radians(-0.5))])
+    t.location = (4.0, -2.0, 0)  # dorse merkezi x = 4 - 12.4 = -8.4
+    # mobil vinç: dönme ekseni P = (-8.4, 8.6); erişim ~10.6 m. -150°: yerdeki kiriş, -90°: dorse
+    mv, dn, bom, uc = mobil_vinc3b("mvinc", (-7.4, 8.6, 0), M, bom_uzun=15.0, bom_aci=48, don=-150)
+    anahtar(dn, ("rotation_euler", 2), [(int(n * 0.35), math.radians(-150)), (int(n * 0.68), math.radians(-90))])
     bpy.context.view_layer.update()
     kb = halat_kanca("mv", uc, M, 3.0)
     yuk = bos("yuk", (0, 0, -1.6), kb)
@@ -716,7 +716,7 @@ def s_sevkiyat(M, sc, n):
     anahtar(kb, ("location", 2), [(1, 2.22 + 0.15), (int(n * 0.12), 2.22 + 0.15), (int(n * 0.32), 6.2),
                                    (int(n * 0.7), 6.2), (int(n * 0.88), 1.83 + 1.6 + 0.0)])
     alan_isigi((0, -14, 10), (2, 0, 2), 1500, boyut=12)
-    kamera_yolu([(1, (-3.0, -21.0, 5.5), (0.5, 0, 3.0)), (n, (2.0, -19.0, 4.8), (1.5, 0, 2.8))], lens=24)
+    kamera_yolu([(1, (-8.0, -27.0, 7.5), (-9.0, 1.0, 4.6)), (n, (-4.5, -25.0, 6.5), (-8.0, 0.5, 4.2))], lens=24)
 
 
 def s_nakliye(M, sc, n):
@@ -793,10 +793,18 @@ def s_kurulum(M, sc, n):
     rv.kutu("agirlik_k", (1.2, 1.2, 1.0), (0, 0, 0.5), M["gri"], agirlik, bevel=0.03)
     rv.kutu("agirlik_et", (0.6, 0.004, 0.3), (0, -0.603, 0.55), M["beyaz"], agirlik)
     rv.yazi("agirlik_yazi", "5 t", (0, -0.607, 0.55), 0.22, M["antrasit"], agirlik)
-    za = z_ray + 0.62 - 0.62
-    # kanca: car içinde yerel z; kanca bloğu dünya kotu = za + yerel
-    anahtar(kanca, ("location", 2), [(int(n * 0.62), -1.4), (int(n * 0.72), -(za - 1.25)), (int(n * 0.76), -(za - 1.25)),
-                                     (int(n * 0.86), -(za - 3.2))])
+    # kanca (dünya kotu; caraskal boşu z=0): ağırlığa iner, sapanlar bağlanır, yük kalkar
+    k_ust, k_yuk = z_ray - 1.4, 1.0 + 0.75
+    anahtar(kanca, ("location", 2), [(int(n * 0.62), k_ust), (int(n * 0.72), k_yuk), (int(n * 0.76), k_yuk),
+                                     (int(n * 0.86), k_yuk + 1.95)])
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            rv.boru(f"agirlik_sapan{sx}{sy}", (sx * 0.5, sy * 0.5, 1.0), (0, 0, 1.0 + 0.72), 0.018,
+                    rv.boya("sapan", rv.srgb("#F2C200"), rough=0.7), agirlik, seg=8)
+    gorunur(agirlik, [(1, True)])
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            gorunur(bpy.data.objects[f"agirlik_sapan{sx}{sy}"], [(1, False), (int(n * 0.74), True)])
     agirlik.parent = None
     anahtar(agirlik, "location", [(1, (4.0, 0, 0)), (int(n * 0.76), (4.0, 0, 0)), (int(n * 0.86), (4.0, 0, 1.95)),
                                   (int(n * 0.88), (4.0, 0, 1.95)), (n, (8.5, 0, 1.95))])
