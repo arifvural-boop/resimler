@@ -94,6 +94,16 @@ toplandı: `gercekci/festoon_kopru_vinc.png` (genel), `gercekci/festoon_detay.pn
 Vinçsiz bağımsız ürün görselleri: `gercekci/festoon_urun.png` (ray boyunca), `festoon_urun_yan.png` (önden),
 `festoon_urun_araba.png` (araba yakın plan) — `render_festoon.py urun | urun_yan | urun_araba`.
 
+## Zincirli vinç ürün fotoğrafları (0,5 t)
+
+`gercekci/zincirli_vinc_05t_capraz.png`, `gercekci/zincirli_vinc_05t_yan.png`: gönderilen 3B render'lar
+(`kaynak/vinc_foto/ham/`) 2,5x büyütülüp fotoğraf işlemesinden geçirildi (ton eğrisi, yerel kontrast, boya dokusu,
+ışıma, gren; saf beyaz zemin). Çapraz görünüşte kanca bloğundaki "2 ton" etiketi gövdeyle aynı "0.5 ton" yapıldı.
+
+```bash
+./venv/bin/python kaynak/foto_gercekci.py kaynak/vinc_foto/ham/zincirli_vinc_05t_capraz.jpg gercekci/zincirli_vinc_05t_capraz.png --etiket 598,872,632,918,"0.5|ton"
+```
+
 ## Yeniden üretme
 
 ```bash
